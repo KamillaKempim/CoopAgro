@@ -1,7 +1,7 @@
 <?php
 // Configurações de acesso ao banco de dados
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'agricultura_familiar');
+define('DB_NAME', 'coopagro');
 define('DB_USER', 'root');
 define('DB_PASS', 'Seq098@$');
 

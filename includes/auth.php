@@ -25,4 +25,16 @@ function generateCSRFToken() {
 function verifyCSRFToken($token) {
     return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
 }
+
+// Função para obter informações do usuário logado
+function getUserInfo() {
+    if (isLoggedIn()) {
+        return [
+            'id' => $_SESSION['user_id'],
+            'nome' => $_SESSION['username'],
+            'email' => $_SESSION['user_email']
+        ];
+    }
+    return null;
+}
 ?>

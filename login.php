@@ -6,17 +6,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = sanitizeInput($_POST['username']);
     $password = $_POST['password'];
     
-    // Em um sistema real, isso viria do banco de dados
-    $valid_username = 'admin';
-    $valid_password_hash = password_hash('admin123', PASSWORD_DEFAULT);
-    
-    if ($username === $valid_username && password_verify($password, $valid_password_hash)) {
-        $_SESSION['user_id'] = 1;
-        $_SESSION['username'] = $username;
-        header("Location: telaadministrativa.php");
-        exit();
-    } else {
-        $error = "Credenciais inválidas!";
+    try {
+        // Conecta ao banco de dados
+        $conn = getDBConnection();
+        
+        // Prepara a consulta para buscar o usuário
+        $sql = "SELECT id, nome, email, senha FROM usuarios WHERE email = :username OR nome = :username";
+        $stmt = $conn->prepare($sql);
+        $stmt->bindParam(':username', $username);
+        $stmt->execute();
+        
+        // Verifica se encontrou o usuário
+        if ($stmt->rowCount() == 1) {
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Verifica a senha
+            if (password_verify($password, $user['senha'])) {
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['username'] = $user['nome'];
+                $_SESSION['user_email'] = $user['email'];
+                
+                header("Location: telaadministrativa.php");
+                exit();
+            } else {
+                $error = "Senha incorreta!";
+            }
+        } else {
+            $error = "Usuário não encontrado!";
+        }
+    } catch(PDOException $e) {
+        $error = "Erro no sistema. Tente novamente mais tarde.";
+        error_log("Erro de login: " . $e->getMessage());
     }
 }
 ?>
@@ -45,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php endif; ?>
                         <form method="POST">
                             <div class="mb-3">
-                                <label for="username" class="form-label">Usuário</label>
+                                <label for="username" class="form-label">Usuário ou Email</label>
                                 <input type="text" class="form-control" id="username" name="username" required>
                             </div>
                             <div class="mb-3">
@@ -55,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <button type="submit" class="btn btn-success w-100">Entrar</button>
                         </form>
                         <p class="text-center mt-3 mb-0">
-                            <small>Demo: admin / admin123</small>
+                            <a href="cadastro.php">Não tem uma conta? Cadastre-se</a>
                         </p>
                     </div>
                 </div>
