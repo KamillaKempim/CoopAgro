@@ -177,7 +177,7 @@
   </main>
 
   <footer>
-    <?php require_once "_parts/_footer.php" ?>
+    <?php require_once "includes/_footer.php" ?>
   </footer>
 
 

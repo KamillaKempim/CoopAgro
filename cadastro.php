@@ -266,7 +266,7 @@
         </div>
         
         <div class="footer">
-            <p>Agricultura Familiar &copy; 2023 - Todos os direitos reservados</p>
+            <?php include 'includes/_footer.php'; ?>
         </div>
     </div>
 
