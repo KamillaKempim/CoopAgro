@@ -44,18 +44,13 @@
              * @param string $data O dado a ser limpo.
              * @return string O dado limpo.
              */
-            //function sanitizeInput($data) {
-            //    $data = trim($data);
-            //    $data = stripslashes($data);
-           //     $data = htmlspecialchars($data);
-           //     return $data;
-          //  }
-
+        
             // -----------------------------------------------------------------
             
-            // Variáveis para mensagens
+            // Variáveis para mensagens e redirecionamento
             $message = '';
             $messageClass = '';
+            $redirectToLogin = false;
             
             // Processa o formulário quando enviado
             if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -127,8 +122,9 @@
                                 
                                 // Executa a query
                                 if ($stmt->execute()) {
-                                    $message = "Cadastro realizado com sucesso! Bem-vindo à CoopAgro!";
+                                    $message = "Cadastro realizado com sucesso! Bem-vindo à CoopAgro! Você será redirecionado para a página de login em 3 segundos.";
                                     $messageClass = "success";
+                                    $redirectToLogin = true; // Ativa o redirecionamento
                                     // Reseta tentativas em caso de sucesso
                                     $_SESSION['cadastro_tentativas'] = 0;
                                 } else {
@@ -154,6 +150,15 @@
             // Exibe mensagem se houver
             if (!empty($message)) {
                 echo "<div class='message $messageClass'>$message</div>";
+            }
+            
+            // Adiciona script de redirecionamento se o cadastro foi bem-sucedido
+            if ($redirectToLogin) {
+                echo '<script>
+                    setTimeout(function() {
+                        window.location.href = "login.php";
+                    }, 3000); // 3000 milissegundos = 3 segundos
+                </script>';
             }
             ?>
             
@@ -349,21 +354,86 @@
             submitBtn.innerHTML = 'Cadastrando... <span class="loading"></span>';
         });
         
-        // ... (o restante do seu código JavaScript para máscaras de CEP, Celular, CPF/CNPJ continua aqui, pois já estava correto) ...
+        // Formatação do CEP
         const cepInput = document.getElementById('cep');
+        cepInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 5) {
+                value = value.substring(0, 5) + '-' + value.substring(5, 8);
+            }
+            e.target.value = value;
+        });
+        
+        // Busca automática de endereço pelo CEP
         cepInput.addEventListener('blur', function() {
             const cep = cepInput.value.replace(/\D/g, '');
+            
             if (cep.length === 8) {
                 fetch(`https://viacep.com.br/ws/${cep}/json/`)
                     .then(response => response.json())
                     .then(data => {
                         if (!data.erro) {
-                            document.getElementById('rua').value = data.logouro || '';
+                            document.getElementById('rua').value = data.logradouro || '';
                             document.getElementById('municipio').value = data.localidade || '';
                         }
                     })
                     .catch(error => console.error('Erro ao buscar CEP:', error));
             }
+        });
+        
+        // Formatação do celular
+        const celularInput = document.getElementById('celular');
+        celularInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 0) {
+                value = '(' + value;
+                if (value.length > 3) {
+                    value = value.substring(0, 3) + ') ' + value.substring(3);
+                }
+                if (value.length > 10) {
+                    value = value.substring(0, 10) + '-' + value.substring(10, 15);
+                }
+            }
+            e.target.value = value;
+        });
+        
+        // Formatação dinâmica do CPF/CNPJ
+        tipoUsuario.addEventListener('change', function() {
+            cpfCnpj.placeholder = this.value === 'Produtor' ? '000.000.000-00' : '00.000.000/0000-00';
+            cpfCnpj.value = '';
+        });
+        
+        cpfCnpj.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            
+            if (tipoUsuario.value === 'Produtor') {
+                // Formata CPF
+                if (value.length > 3) {
+                    value = value.substring(0, 3) + '.' + value.substring(3);
+                }
+                if (value.length > 7) {
+                    value = value.substring(0, 7) + '.' + value.substring(7);
+                }
+                if (value.length > 11) {
+                    value = value.substring(0, 11) + '-' + value.substring(11, 13);
+                }
+            } else if (tipoUsuario.value === 'Comerciante') {
+                // Formata CNPJ
+                if (value.length > 2) {
+                    value = value.substring(0, 2) + '.' + value.substring(2);
+                }
+                if (value.length > 6) {
+                    value = value.substring(0, 6) + '.' + value.substring(6);
+                }
+                if (value.length > 10) {
+                    value = value.substring(0, 10) + '/' + value.substring(10);
+                }
+                if (value.length > 15) {
+                    value = value.substring(0, 15) + '-' + value.substring(15, 17);
+                }
+            }
+            
+            e.target.value = value;
         });
     });
     </script>
