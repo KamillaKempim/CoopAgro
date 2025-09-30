@@ -53,8 +53,8 @@
         <div class="footer-bottom-content">
             <p>&copy; <?php echo date('Y'); ?> CoopAgro - Todos os direitos reservados</p>
             <div class="footer-links">
-                <a href="politica-privacidade.php">Política de Privacidade</a>
-                <a href="termos-uso.php">Termos de Uso</a>
+                <a href="politica.php">Política de Privacidade</a>
+                <a href="politica.php">Termos de Uso</a>
             </div>
         </div>
     </div>
