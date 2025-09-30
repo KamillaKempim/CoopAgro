@@ -20,6 +20,6 @@ function getDBConnection() {
 
 // Previne contra SQL Injection
 function sanitizeInput($data) {
-    return htmlspecialchars(strip_tags(trim($data)));
+   return htmlspecialchars(strip_tags(trim($data)));
 }
 ?>
