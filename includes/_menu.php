@@ -17,7 +17,7 @@
           <a class="nav-link text-white fw-semibold" href="#sobre" class="nav-link">Sobre</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link text-white fw-semibold" href="#produtos" class="nav-link">Produtos</a>
+          <a class="nav-link text-white fw-semibold" href="produtos.php" class="nav-link">Produtos</a>
         </li>
         <li class="nav-item">
           <a class="nav-link text-white fw-semibold" href="#SobreNos" class="nav-link">Sobre Nós</a>
