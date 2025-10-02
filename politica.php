@@ -17,7 +17,7 @@
             <h2>1. Introdução</h2>
             <p>A <strong>CoopAgro - Cooperativa Agropecuária</strong> valoriza a transparência, a segurança e a privacidade de seus associados, parceiros, agricultores e comerciantes. Este documento tem como objetivo esclarecer como realizamos a coleta, o tratamento, o armazenamento e a utilização dos dados pessoais fornecidos pelos usuários em nosso site, em conformidade com a <strong>Lei Geral de Proteção de Dados Pessoais - LGPD (Lei nº 13.709/2018)</strong>.</p>
             <div class="highlight">
-                <p>Ao acessar ou utilizar o site da CoopAgro, o usuário declara estar ciente e de acordo com os termos aqui estabelecidos. Caso não concorde, recomendamos que não prossiga com a utilização do site.</p>
+                <p>Ao utilizar o site da CoopAgro, o usuário declara estar ciente e de acordo com os termos aqui estabelecidos. Caso não concorde, recomendamos que não prossiga com a utilização do site.</p>
             </div>
         </section>
 
@@ -45,7 +45,9 @@
                 <li>Possibilitar comunicação entre a CoopAgro e seus cooperados/comerciantes;</li>
                 <li>Viabilizar o cadastro de novos membros, agricultores e comerciantes;</li>
                 <li>Envio de informações relevantes sobre atividades, eventos e serviços da cooperativa;</li>
+                <li>Entrega dos produtos aos destinatarios solicitantes</li>
                 <li>Cumprimento de obrigações legais e regulatórias aplicáveis;</li>
+                <li>Analise de atividades agricolas para oferecimento de credito personalizado3.</li>
                 <li>Aprimoramento da experiência do usuário no site e melhoria contínua dos serviços oferecidos.</li>
             </ul>
         </section>
@@ -83,6 +85,8 @@
             <ul>
                 <li>Controle de acesso restrito a colaboradores autorizados;</li>
                 <li>Utilização de criptografia e ferramentas de segurança da informação;</li>
+                <li>Aplicacao dos pilares de confidencialidade, integridade e disponibilidade</li>
+                <li>Todos os dados armazenados no site possuem rotina de backup regular com redundancia e criptografia seguindo em conformidade com a ISO 27002</li>
                 <li>Monitoramento e auditoria periódica dos sistemas utilizados.</li>
             </ul>
             <p>Os dados serão armazenados pelo período necessário para cumprimento das finalidades legais, regulatórias e contratuais, ou até que o titular solicite a eliminação, salvo hipóteses em que a manutenção seja exigida por lei.</p>
@@ -113,6 +117,7 @@
             <ul>
                 <li>Fornecer informações verídicas, completas e atualizadas;</li>
                 <li>Manter a confidencialidade de suas credenciais de acesso, quando aplicável;</li>
+                <li>Nao compartilhamento de suas credencias de acesso com terceiros, a coopagro nunca solicitara seus dados por email, telefone ou qualquer outro meio digital</li>
                 <li>Utilizar o site da CoopAgro em conformidade com estes termos e com a legislação vigente.</li>
             </ul>
         </section>
@@ -146,7 +151,7 @@
 
         <footer>
             <p>CoopAgro - Cooperativa Agropecuária</p>
-            <p>Última atualização: <?php echo date('d/m/Y'); ?></p>
+            <p>Última atualização: 01/10/2025</p>
         </footer>
     </div>
 </body>
