@@ -48,39 +48,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - CoopAgro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="css/login.css" rel="stylesheet">
+    <link href="css/Login.css" rel="stylesheet">
 </head>
-<body class="bg-light">
-  <header>
+<body style="background-color: #064420;">
+   <header>
     <?php require_once "includes/_menu.php"; ?>
   </header>
-    <div class="container py-5">
-        <div class="row justify-content-center">
-            <div class="col-md-6 col-lg-4">
-                <div class="card shadow">
-                    <div class="card-body p-5">
-                        <h2 class="text-center mb-4">CoopAgro</h2>
-                        <?php if (isset($error)): ?>
-                            <div class="alert alert-danger"><?php echo $error; ?></div>
-                        <?php endif; ?>
-                        <form method="POST">
-                            <div class="mb-3">
-                                <label for="username" class="form-label">Usuário ou Email</label>
-                                <input type="text" class="form-control" id="username" name="username" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="password" class="form-label">Senha</label>
-                                <input type="password" class="form-control" id="password" name="password" required>
-                            </div>
-                            <button type="submit" class="btn btn-success w-100">Entrar</button>
-                        </form>
-                        <p class="text-center mt-3 mb-0">
-                            <a href="cadastro.php">Não tem uma conta? Cadastre-se</a>
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
+ <div class="container-fluid py-5 px-0">
+  <div class="row justify-content-center align-items-center gx-0" style="min-height: 80vh;">
+    <!-- Coluna da imagem -->
+    <div class="col-md-6 d-none d-md-block p-0" style="height: 80vh;">
+      <img src="Images/Login3.png" alt="Agricultor" class="img-fluid h-100 w-100" style="object-fit: cover; display: block;">
     </div>
-</body>
-</html>
+
+    <!-- Coluna do card -->
+    <div class="col-12 col-md-5 px-4">
+      <div class="card shadow">
+        <div class="card-body p-5">
+          <h2 class="text-center mb-4">CoopAgro</h2>
+          <?php if (isset($error)): ?>
+            <div class="alert alert-danger"><?php echo $error; ?></div>
+          <?php endif; ?>
+          <form method="POST">
+            <div class="mb-3">
+              <label for="username" class="form-label">Usuário ou Email</label>
+              <input type="text" class="form-control" id="username" name="username" required>
+            </div>
+            <div class="mb-3">
+              <label for="password" class="form-label">Senha</label>
+              <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-success w-100">Entrar</button>
+          </form>
+          <p class="text-center mt-3 mb-0">
+            <a href="cadastro.php">Não tem uma conta? Cadastre-se</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<footer>
+    <?php require_once "includes/_footer.php" ?>
+  </footer>
