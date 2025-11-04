@@ -1,0 +1,111 @@
+:root {
+            --verde-principal: #2e7d32;
+            --verde-secundario: #4caf50;
+            --verde-claro: #a5d6a7;
+            --bege: #f5f5dc;
+            --marrom: #8d6e63;
+        }
+        
+        .hero-section {
+            background: linear-gradient(rgba(46, 125, 50, 0.8), rgba(76, 175, 80, 0.8)), 
+                        url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2000&q=80');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            padding: 100px 0;
+            margin-bottom: 50px;
+        }
+        
+        .principios-card {
+            border-left: 4px solid var(--verde-principal);
+            transition: transform 0.3s ease;
+            height: 100%;
+        }
+        
+        .principios-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .coop-benefits {
+            background-color: var(--bege);
+            padding: 60px 0;
+        }
+        
+        .benefit-icon {
+            font-size: 3rem;
+            color: var(--verde-principal);
+            margin-bottom: 20px;
+        }
+        
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+        }
+        
+        .timeline-item {
+            margin-bottom: 30px;
+            padding-left: 30px;
+            border-left: 3px solid var(--verde-principal);
+        }
+        
+        .coop-values {
+            background: linear-gradient(135deg, var(--verde-principal) 0%, var(--verde-secundario) 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 40px;
+        }
+        
+        .agricultura-img {
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .btn-agro {
+            background-color: var(--verde-principal);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+        }
+        
+        .btn-agro:hover {
+            background-color: var(--verde-secundario);
+            color: white;
+        }
+        
+        .navbar {
+            background-color: var(--verde-principal) !important;
+        }
+        
+        .bg-agro {
+            background-color: var(--verde-principal);
+        }
+        
+        .text-agro {
+            color: var(--verde-principal);
+        }
+        
+        .card-agro {
+            border: 1px solid var(--verde-claro);
+        }
+        
+        .stats-section {
+            background: linear-gradient(rgba(46, 125, 50, 0.9), rgba(76, 175, 80, 0.9)), 
+                        url('https://images.unsplash.com/photo-1492496913980-501348b61469?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2000&q=80');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            padding: 60px 0;
+        }
+        
+        .stat-number {
+            font-size: 3rem;
+            font-weight: bold;
+        }
+        
+        .agricultura-familiar {
+            background-color: #f9f9f9;
+            padding: 60px 0;
+            border-top: 5px solid var(--verde-principal);
+            border-bottom: 5px solid var(--verde-principal);
+        }

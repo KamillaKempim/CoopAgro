@@ -20,7 +20,7 @@
           <a class="nav-link text-white fw-semibold" href="produtos.php" class="nav-link">Produtos</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link text-white fw-semibold" href="#SobreNos" class="nav-link">Sobre Nós</a>
+          <a class="nav-link text-white fw-semibold" href="cooperativismo.php" class="nav-link">Cooperativismo</a>
         </li>
         <li class="nav-item">
           <a class="nav-link text-white fw-semibold" href="#iframe" class="nav-link">Localização</a>

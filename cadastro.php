@@ -205,25 +205,24 @@
                         <div id="senha-feedback" class="password-feedback"></div>
                     </div>
                     
-                    <div class="form-group">
+                <div class="form-group">
                         <label for="confirmar_senha">Confirmar Senha:</label>
                         <input type="password" id="confirmar_senha" name="confirmar_senha" required>
                         <div id="confirmar-senha-feedback" class="password-feedback"></div>
                     </div>
                 </div>
-                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cep">CEP:</label>
+                        <input type="text" id="cep" name="cep" required value="<?php echo isset($_POST['cep']) ? htmlspecialchars($_POST['cep']) : ''; ?>">
+                    </div>
+
                 <div class="form-row">
                     <div class="form-group full-width">
                         <label for="rua">Rua:</label>
                         <input type="text" id="rua" name="rua" required value="<?php echo isset($_POST['rua']) ? htmlspecialchars($_POST['rua']) : ''; ?>">
                     </div>
                 </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="cep">CEP:</label>
-                        <input type="text" id="cep" name="cep" required value="<?php echo isset($_POST['cep']) ? htmlspecialchars($_POST['cep']) : ''; ?>">
-                    </div>
                     
                     <div class="form-group">
                         <label for="numero">Número:</label>
