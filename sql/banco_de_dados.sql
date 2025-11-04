@@ -9,9 +9,10 @@ CREATE TABLE produtos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
     descricao TEXT NOT NULL,
+    tipo VARCHAR(50) NOT NULL,
     preco DECIMAL(10,2) NOT NULL,
     quantidade_estoque INT NOT NULL DEFAULT 0,
-    imagem_url VARCHAR(500),
+    imagem_url VARCHAR(255),
     disponivel TINYINT(1) NOT NULL DEFAULT 1,
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
