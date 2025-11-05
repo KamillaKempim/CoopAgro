@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['username'] = $user['nome'];
                 $_SESSION['user_email'] = $user['email'];
                 
-                header("Location: telaadministrativa.php");
+                header("Location: perfil.php");
                 exit();
             } else {
                 $error = "Senha incorreta!";
