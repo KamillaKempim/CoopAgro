@@ -7,6 +7,7 @@ $usuario_id = $_SESSION['user_id'];
 $stats = [];
 $pedidos_recentes = [];
 $produtos_pendentes = [];
+$produtos_para_validar = [];
 
 try {
     $conn = getDBConnection();
@@ -58,6 +59,17 @@ try {
         $produtos_pendentes = $stmtProdutosPendentes->fetch(PDO::FETCH_ASSOC);
     }
     
+    // Se for administrador, busca produtos pendentes de validação
+    if ($usuario['tipo_usuario'] === 'Administrador') {
+        $stmtProdutosValidar = $conn->prepare("
+            SELECT COUNT(*) as total_para_validar 
+            FROM produtos_propostos 
+            WHERE status = 'pendente'
+        ");
+        $stmtProdutosValidar->execute();
+        $produtos_para_validar = $stmtProdutosValidar->fetch(PDO::FETCH_ASSOC);
+    }
+    
 } catch(PDOException $e) {
     $error = "Erro ao carregar dados: " . $e->getMessage();
 }
@@ -77,6 +89,8 @@ try {
             --verde-secundario: #4caf50;
             --verde-claro: #a5d6a7;
             --bege: #f5f5dc;
+            --roxo-admin: #6a1b9a;
+            --roxo-admin-claro: #9c4dcc;
         }
         
         .profile-hero {
@@ -84,6 +98,10 @@ try {
             color: white;
             padding: 40px 0;
             margin-bottom: 30px;
+        }
+        
+        .admin-hero {
+            background: linear-gradient(135deg, var(--roxo-admin) 0%, var(--roxo-admin-claro) 100%) !important;
         }
         
         .user-avatar {
@@ -147,9 +165,31 @@ try {
             border: none;
         }
         
+        .btn-admin {
+            background: linear-gradient(135deg, var(--roxo-admin) 0%, var(--roxo-admin-claro) 100%);
+            color: white;
+            border: none;
+        }
+        
+        .btn-admin-outline {
+            background: transparent;
+            color: var(--roxo-admin);
+            border: 2px solid var(--roxo-admin);
+        }
+        
         .btn-profile:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            color: white;
+        }
+        
+        .btn-admin:hover {
+            background: linear-gradient(135deg, var(--roxo-admin-claro) 0%, var(--roxo-admin) 100%);
+            color: white;
+        }
+        
+        .btn-admin-outline:hover {
+            background: var(--roxo-admin);
             color: white;
         }
         
@@ -191,10 +231,19 @@ try {
             font-weight: 600;
         }
         
+        .admin-section-title {
+            color: var(--roxo-admin);
+            border-bottom: 2px solid var(--roxo-admin-claro);
+        }
+        
         .quick-actions {
             background: linear-gradient(135deg, var(--verde-claro) 0%, #e8f5e8 100%);
             border-radius: 15px;
             padding: 25px;
+        }
+        
+        .admin-quick-actions {
+            background: linear-gradient(135deg, #e1bee7 0%, #f3e5f5 100%);
         }
         
         .producer-badge {
@@ -206,20 +255,37 @@ try {
             background: linear-gradient(135deg, #2196F3 0%, #21CBF3 100%);
             color: white;
         }
+        
+        .admin-badge {
+            background: linear-gradient(135deg, var(--roxo-admin) 0%, var(--roxo-admin-claro) 100%);
+            color: white;
+        }
     </style>
 </head>
 <body>
     <?php include 'includes/_menu.php'; ?>
 
     <!-- Hero Section -->
-    <section class="profile-hero">
+    <section class="profile-hero <?php echo $usuario['tipo_usuario'] === 'Administrador' ? 'admin-hero' : ''; ?>">
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-md-8 text-center text-md-start">
                     <h1 class="display-5 fw-bold mb-3">Olá, <?php echo htmlspecialchars(explode(' ', $usuario['nome'])[0]); ?>!</h1>
-                    <p class="lead mb-4">Bem-vindo(a) ao seu painel na CoopAgro</p>
+                    <p class="lead mb-4">
+                        <?php if ($usuario['tipo_usuario'] === 'Administrador'): ?>
+                            Bem-vindo(a) ao painel administrativo da CoopAgro
+                        <?php else: ?>
+                            Bem-vindo(a) ao seu painel na CoopAgro
+                        <?php endif; ?>
+                    </p>
                     <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start">
-                        <span class="badge <?php echo $usuario['tipo_usuario'] === 'Produtor' ? 'producer-badge' : 'trader-badge'; ?> fs-6">
+                        <span class="badge 
+                            <?php 
+                            if ($usuario['tipo_usuario'] === 'Produtor') echo 'producer-badge';
+                            elseif ($usuario['tipo_usuario'] === 'Administrador') echo 'admin-badge';
+                            else echo 'trader-badge'; 
+                            ?> 
+                            fs-6">
                             <i class="bi bi-person-badge"></i> 
                             <?php echo htmlspecialchars($usuario['tipo_usuario']); ?>
                         </span>
@@ -231,6 +297,12 @@ try {
                             <span class="badge bg-warning text-dark fs-6">
                                 <i class="bi bi-clock-history"></i> 
                                 <?php echo $produtos_pendentes['total_pendentes']; ?> produtos aguardando análise
+                            </span>
+                        <?php endif; ?>
+                        <?php if ($usuario['tipo_usuario'] === 'Administrador' && isset($produtos_para_validar['total_para_validar'])): ?>
+                            <span class="badge bg-warning text-dark fs-6">
+                                <i class="bi bi-shield-check"></i> 
+                                <?php echo $produtos_para_validar['total_para_validar']; ?> produtos para validar
                             </span>
                         <?php endif; ?>
                     </div>
@@ -284,8 +356,8 @@ try {
         <div class="row">
             <!-- Ações Rápidas -->
             <div class="col-lg-4 mb-4">
-                <div class="quick-actions h-100">
-                    <h3 class="section-title">Ações Rápidas</h3>
+                <div class="quick-actions h-100 <?php echo $usuario['tipo_usuario'] === 'Administrador' ? 'admin-quick-actions' : ''; ?>">
+                    <h3 class="section-title <?php echo $usuario['tipo_usuario'] === 'Administrador' ? 'admin-section-title' : ''; ?>">Ações Rápidas</h3>
                     
                     <div class="d-grid gap-3">
                         <a href="editar_perfil.php" class="btn btn-edit btn-profile">
@@ -316,6 +388,32 @@ try {
                             <a href="produtos_aprovados.php" class="btn btn-outline-success btn-profile">
                                 <i class="bi bi-check-circle"></i> Produtos Aprovados
                             </a>
+                        
+                        <?php elseif ($usuario['tipo_usuario'] === 'Administrador'): ?>
+                            <!-- Ações específicas para administradores -->
+                            <a href="validacao_produtos.php" class="btn btn-admin btn-profile">
+                                <i class="bi bi-shield-check"></i> Validar Produtos
+                                <?php if (isset($produtos_para_validar['total_para_validar']) && $produtos_para_validar['total_para_validar'] > 0): ?>
+                                    <span class="badge bg-warning ms-2"><?php echo $produtos_para_validar['total_para_validar']; ?></span>
+                                <?php endif; ?>
+                            </a>
+                            
+                            <a href="editar_produto.php" class="btn btn-admin-outline btn-profile">
+                                <i class="bi bi-pencil-square"></i> Editar Produtos
+                            </a>
+                            
+                            <a href="excluir_produto.php" class="btn btn-outline-danger btn-profile">
+                                <i class="bi bi-trash"></i> Excluir Produtos
+                            </a>
+                            
+                            <a href="admin_usuarios.php" class="btn btn-outline-info btn-profile">
+                                <i class="bi bi-people"></i> Gerenciar Usuários
+                            </a>
+                            
+                            <a href="admin_relatorios.php" class="btn btn-outline-secondary btn-profile">
+                                <i class="bi bi-graph-up"></i> Relatórios
+                            </a>
+                        
                         <?php else: ?>
                             <!-- Ações específicas para comerciantes -->
                             <a href="historico_compras.php" class="btn btn-outline-info btn-profile">
@@ -346,7 +444,7 @@ try {
             <div class="col-lg-4 mb-4">
                 <div class="card info-card h-100">
                     <div class="card-body">
-                        <h3 class="section-title">Informações Pessoais</h3>
+                        <h3 class="section-title <?php echo $usuario['tipo_usuario'] === 'Administrador' ? 'admin-section-title' : ''; ?>">Informações Pessoais</h3>
                         
                         <div class="mb-3">
                             <strong><i class="bi bi-person me-2"></i>Nome Completo:</strong>
@@ -371,7 +469,12 @@ try {
                         <div class="mb-3">
                             <strong><i class="bi bi-tag me-2"></i>Tipo de Usuário:</strong>
                             <p class="mb-2">
-                                <span class="badge <?php echo $usuario['tipo_usuario'] === 'Produtor' ? 'producer-badge' : 'trader-badge'; ?>">
+                                <span class="badge 
+                                    <?php 
+                                    if ($usuario['tipo_usuario'] === 'Produtor') echo 'producer-badge';
+                                    elseif ($usuario['tipo_usuario'] === 'Administrador') echo 'admin-badge';
+                                    else echo 'trader-badge'; 
+                                    ?>">
                                     <?php echo htmlspecialchars($usuario['tipo_usuario']); ?>
                                 </span>
                             </p>
@@ -384,7 +487,7 @@ try {
             <div class="col-lg-4 mb-4">
                 <div class="card info-card h-100">
                     <div class="card-body">
-                        <h3 class="section-title">Endereço de Entrega</h3>
+                        <h3 class="section-title <?php echo $usuario['tipo_usuario'] === 'Administrador' ? 'admin-section-title' : ''; ?>">Endereço de Entrega</h3>
                         
                         <div class="mb-3">
                             <strong><i class="bi bi-geo-alt me-2"></i>Endereço:</strong>
@@ -417,6 +520,49 @@ try {
                 </div>
             </div>
         </div>
+
+        <!-- Seção de Administração (apenas para administradores) -->
+        <?php if ($usuario['tipo_usuario'] === 'Administrador'): ?>
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card border-purple">
+                    <div class="card-header bg-light">
+                        <h3 class="section-title admin-section-title mb-0">
+                            <i class="bi bi-shield-check"></i> Painel Administrativo
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <div class="card stat-card text-center p-4 border-purple">
+                                    <i class="bi bi-box-seam stat-icon text-purple"></i>
+                                    <div class="stat-number text-purple"><?php echo $produtos_para_validar['total_para_validar'] ?? 0; ?></div>
+                                    <p class="text-muted mb-0">Produtos para Validar</p>
+                                    <a href="validacao_produtos.php" class="btn btn-admin btn-sm mt-2">Ver Detalhes</a>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card stat-card text-center p-4">
+                                    <i class="bi bi-people stat-icon text-info"></i>
+                                    <div class="stat-number">0</div>
+                                    <p class="text-muted mb-0">Usuários Ativos</p>
+                                    <a href="admin_usuarios.php" class="btn btn-outline-info btn-sm mt-2">Gerenciar</a>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card stat-card text-center p-4">
+                                    <i class="bi bi-graph-up stat-icon text-success"></i>
+                                    <div class="stat-number">R$ 0,00</div>
+                                    <p class="text-muted mb-0">Vendas do Mês</p>
+                                    <a href="admin_relatorios.php" class="btn btn-outline-success btn-sm mt-2">Ver Relatórios</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <!-- Pedidos Recentes -->
         <div class="row mt-4">
