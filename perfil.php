@@ -365,12 +365,13 @@ try {
                         </a>
                         
                         <a href="meus_pedidos.php" class="btn btn-orders btn-profile">
-                            <i class="bi bi-list-check"></i> Ver Todos os Pedidos
+                            <i class="bi bi-list-check"></i> Meu pedidos - testes
+                        </a>
+
+                        <a href="admin_pedidos.php" class="btn btn-success btn-profile">
+                            <i class="bi bi-cart-plus"></i> Gerenciar pedidos
                         </a>
                         
-                        <a href="produtos.php" class="btn btn-success btn-profile">
-                            <i class="bi bi-cart-plus"></i> Fazer Nova Encomenda
-                        </a>
                         
                         <?php if ($usuario['tipo_usuario'] === 'Produtor'): ?>
                             <!-- Ações específicas para produtores -->
