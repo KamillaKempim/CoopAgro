@@ -124,7 +124,7 @@ INSERT INTO `usuarios` (
   'Administrador Sistema',
   'jhiewertton@gmail.com',
   '11999999999',
-  '', -- senha: inserir hash 
+  '$2y$10$5PedvrP7cOSsj444y.KtF.Vfmv4PQtTlQMXfm4p/tL.pCJAT7gRPe', 
   'Rua Administrativa',
   'Centro',
   '00000000',

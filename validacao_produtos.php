@@ -48,12 +48,22 @@ try {
                 $novaImagemUrl = '';
                 if (!empty($proposta['imagem_url'])) {
                     $origem = 'uploads/propostas/' . $proposta['imagem_url'];
-                    $destino = 'uploads/produtos/' . $proposta['imagem_url'];
+                    
+                    // Gerar novo nome para a imagem (trocar prefixo "proposta" por "produto")
+                    $nomeArquivo = $proposta['imagem_url'];
+                    $novoNomeArquivo = preg_replace('/^proposta_/', 'produto_', $nomeArquivo);
+                    
+                    $destino = 'uploads/produtos/' . $novoNomeArquivo;
                     
                     if (file_exists($origem)) {
-                        // Copiar a imagem para o diretório de produtos
+                        // Copiar a imagem para o diretório de produtos com novo nome
                         if (copy($origem, $destino)) {
-                            $novaImagemUrl = $proposta['imagem_url'];
+                            $novaImagemUrl = $novoNomeArquivo;
+                            
+                            // Excluir a imagem original do diretório de propostas
+                            if (file_exists($origem)) {
+                                unlink($origem);
+                            }
                         } else {
                             // Se não conseguir copiar, usar a imagem original
                             $novaImagemUrl = $proposta['imagem_url'];
@@ -95,6 +105,20 @@ try {
             }
             
         } elseif ($acao === 'rejeitar') {
+            // Buscar dados da proposta para excluir a imagem
+            $stmtProposta = $conn->prepare("SELECT * FROM produtos_propostos WHERE id = ?");
+            $stmtProposta->execute([$proposta_id]);
+            $proposta = $stmtProposta->fetch(PDO::FETCH_ASSOC);
+            
+            if ($proposta && !empty($proposta['imagem_url'])) {
+                $caminhoImagem = 'uploads/propostas/' . $proposta['imagem_url'];
+                
+                // Excluir a imagem da proposta rejeitada
+                if (file_exists($caminhoImagem)) {
+                    unlink($caminhoImagem);
+                }
+            }
+            
             // Atualizar status para rejeitado
             $stmtRejeitar = $conn->prepare("
                 UPDATE produtos_propostos 
