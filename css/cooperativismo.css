@@ -1,21 +1,19 @@
 :root {
-            --verde-principal: #2e7d32;
-            --verde-secundario: #4caf50;
+            --verde-principal: #143d0f;
+            --verde-secundario: #143d0f;
             --verde-claro: #a5d6a7;
             --bege: #f5f5dc;
             --marrom: #8d6e63;
         }
         
         .hero-section {
-            background: linear-gradient(rgba(46, 125, 50, 0.8), rgba(76, 175, 80, 0.8)), 
-                        url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2000&q=80');
-            background-size: cover;
-            background-position: center;
-            color: white;
-            padding: 100px 0;
-            margin-bottom: 50px;
-        }
-        
+    padding: 0;
+    margin: 0;
+}
+
+.hero-section {
+    margin-bottom: 40px; 
+}
         .principios-card {
             border-left: 4px solid var(--verde-principal);
             transition: transform 0.3s ease;
@@ -73,10 +71,6 @@
             color: white;
         }
         
-        .navbar {
-            background-color: var(--verde-principal) !important;
-        }
-        
         .bg-agro {
             background-color: var(--verde-principal);
         }
@@ -109,3 +103,39 @@
             border-top: 5px solid var(--verde-principal);
             border-bottom: 5px solid var(--verde-principal);
         }
+        nav {
+  background-color: #143d0f;
+  padding: 14px;
+  text-align: center;
+}
+
+nav a {
+  color: #143d0f;
+  text-decoration: none;
+  margin: 5 15px;
+  font-weight: bold;
+  font-family: var(--fonte-texto);
+}
+
+.nav-custom {
+  background-color: rgb(224, 219, 219);
+}
+
+.nav-link {
+  color: var(--verde-principal);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.nav-link:hover {
+  color: var(--verde-principal);
+  border-radius: 12px;
+  box-shadow: 0 16px 32px rgb(248, 244, 244);
+  transform: translateY(-4px);
+}
+.navbar-nav {
+  gap: 10px;
+  list-style: none; /* remove as bolinhas */
+  padding-left: 0;  /* remove o recuo padrão do UL */
+  margin: 0;
+  display: flex;    /* deixa os itens lado a lado */
+}

@@ -1,0 +1,36 @@
+/* Banner igual estilo do site */
+.contato-header {
+    background: linear-gradient(rgba(20, 61, 15, 0.6), rgba(20, 61, 15, 0.6)),
+                url('../images/contato.png');
+    background-size: cover;
+    background-position: center;
+    height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-shadow: 1px 1px 5px #000;
+    margin-bottom: 40px;
+}
+
+/* Card do formulário */
+.contato-card {
+    max-width: 700px;
+    margin: 0 auto 60px auto;
+    padding: 40px;
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+}
+
+/* Ajuste dos inputs */
+form .form-label {
+    font-weight: 600;
+    color: #143d0f;
+}
+
+button.btn-success {
+    font-size: 18px;
+    padding: 10px;
+    border-radius: 10px;
+}

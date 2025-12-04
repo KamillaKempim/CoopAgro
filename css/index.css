@@ -41,20 +41,6 @@ body {
   background-attachment: fixed;
 }
 
-.empresa h1 {
-  font-family: var(--fonte-titulo);
-  font-size: 40px;
-  font-weight: bold;
-  margin-bottom: 5px;
-  margin-top: 50px;
-}
-
-.empresa p {
-  font-family: var(--fonte-texto);
-  font-size: 18px;
-  color: #555555;
-}
-
 header {
   color: #143d0f;
   text-align: center;

@@ -20,9 +20,6 @@ if (session_status() === PHP_SESSION_NONE) {
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav gap-4 me-auto">
         <li class="nav-item">
-          <a class="nav-link text-white fw-semibold" href="#sobre">Sobre</a>
-        </li>
-        <li class="nav-item">
           <a class="nav-link text-white fw-semibold" href="produtos.php">Produtos</a>
         </li>
         <li class="nav-item">

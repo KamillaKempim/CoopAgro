@@ -33,10 +33,7 @@
         <div class="footer-section">
             <h4>Redes Sociais</h4>
             <div class="social-icons">
-                <a href="#"><i class="fab fa-facebook-f"></i></a>
-                <a href="#"><i class="fab fa-instagram"></i></a>
-                <a href="#"><i class="fab fa-twitter"></i></a>
-                <a href="#"><i class="fab fa-youtube"></i></a>
+                <a href="https://www.instagram.com/coopagro.site?igsh=MXg5aGhpMmhwNmxlOA%3D%3D&utm_source=qr"><i class="fab fa-instagram"></i>
                 <a href="#"><i class="fab fa-whatsapp"></i></a>
             </div>
             <div class="newsletter">

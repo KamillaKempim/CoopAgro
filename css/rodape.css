@@ -21,13 +21,13 @@
     }
     
     .footer-section h3 {
-        color: #FFC107;
+        color: #143d0f;
         margin-bottom: 15px;
         font-size: 24px;
     }
     
     .footer-section h4 {
-        color: #FFC107;
+        color: #143d0f;
         margin-bottom: 15px;
         font-size: 18px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -41,7 +41,7 @@
     
     .footer-section i {
         margin-right: 10px;
-        color: #FFC107;
+        color: #143d0f;
         width: 20px;
     }
     
@@ -61,7 +61,7 @@
     }
     
     .footer-section ul li a:hover {
-        color: #FFC107;
+        color: #143d0f;
     }
     
     .social-icons {
@@ -84,7 +84,7 @@
     }
     
     .social-icons a:hover {
-        background: #FFC107;
+        background:#143d0f ;
         transform: translateY(-3px);
     }
     
@@ -102,7 +102,7 @@
     }
     
     .newsletter-form button {
-        background: #FFC107;
+        background: #143d0f;
         color: #2E7D32;
         border: none;
         padding: 10px 15px;
@@ -113,7 +113,7 @@
     }
     
     .newsletter-form button:hover {
-        background: #FFD54F;
+        background: #143d0f;
     }
     
     .footer-bottom {
@@ -139,7 +139,7 @@
     }
     
     .footer-links a:hover {
-        color: #FFC107;
+        color: #143d0f;
     }
     
     /* Responsividade */

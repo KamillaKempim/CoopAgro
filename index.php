@@ -55,88 +55,76 @@
 
   <!-- Produtos -->
   <section id="produtos" class="mt-5">
-    <h2 class="text-center mb-3">Produtos em Destaque</h2>
+    <h2 class="text-center mb-3">Alguns do produtos que você pode encontrar na plataforma</h2>
     <h6 class="text-center">
-      Confira alguns produtos orgânicos frescos disponíveis em nossa plataforma, <br> diretamente dos produtores para você!
+      Confira alguns produtos orgânicos frescos em nossa plataforma, <br> diretamente dos produtores para você!
     </h6>
 
     <div id="carouselProdutos" class="carousel slide" data-bs-ride="carousel">
       <div class="carousel-inner">
 
-        <!--Produtos -->
+        <!--Alguns dos nosso produtos -->
         <div class="carousel-item active">
           <div class="d-flex justify-content-center gap-3">
 
-            <!-- Card Tomate -->
+            <!-- Card Hortaliças -->
             <div class="card" style="width: 18rem;">
-              <img src="" class="card-img-top" alt="Tomate Cereja">
+              <img src="Images/hortaliças.jpg" class="card-img-top" alt="Hortaliças">
               <div class="card-body text-center">
-                <h5 class="card-title">Tomate Cereja</h5>
-                <p class="card-text">Descrição...</p>
-                <p class="fw-bold text-success">R$2,99</p>
-                <a href="#" class="btn btn-success">Encomendar</a>
+                <h5 class="card-title">Hortaliças</h5>
+                <p class="card-text">Verduras e legumes fresquinhos direto do produtor.</p>
               </div>
             </div>
 
-            <!-- Card Alface -->
+            <!-- Card Frutas-->
             <div class="card" style="width: 18rem;">
-              <img src="" class="card-img-top" alt="Alface">
+              <img src="Images/Frutas.jpg" class="card-img-top" alt="Frutas">
               <div class="card-body text-center">
-                <h5 class="card-title">Alface</h5>
-                <p class="card-text">Descrição...</p>
-                <p class="fw-bold text-success">R$2,99</p>
-                <a href="#" class="btn btn-success">Encomendar</a>
+                <h5 class="card-title">Frutas</h5>
+                <p class="card-text">Diversas frutas frescas e nutritivas para sua mesa.</p>
               </div>
             </div>
 
-            <!-- Card Pitaya -->
+            <!-- Card Grãos -->
             <div class="card" style="width: 18rem;">
-              <img src="" class="card-img-top" alt="Pitaya">
+              <img src="Images/Grãos.jpg" class="card-img-top" alt="Grãos">
               <div class="card-body text-center">
-                <h5 class="card-title">Pitaya</h5>
-                <p class="card-text">Descrição...</p>
-                <p class="fw-bold text-success">R$2,99</p>
-                <a href="#" class="btn btn-success">Encomendar</a>
+                <h5 class="card-title">Grãos</h5>
+                <p class="card-text">Arroz, feijão, milho e muito mais, todos orgânicos.</p>
               </div>
             </div>
 
           </div>
         </div>
 
-        <!--produtos em Destaque-->
+        <!--Alguns dos nossos produtos-->
         <div class="carousel-item">
           <div class="d-flex justify-content-center gap-3">
 
-            <!--Fruta 1-->
+            <!--card Produtos Orgânicos-->
             <div class="card" style="width: 18rem;">
-              <img src="" class="card-img-top" alt="Maçã">
+              <img src="Images/Produtos Orgânicos.jpg" class="card-img-top" alt="Produtos Orgânicos">
               <div class="card-body text-center">
-                <h5 class="card-title">Maçã</h5>
-                <p class="card-text">Descrição...</p>
-                <p class="fw-bold text-success">R$3,50</p>
-                <a href="#" class="btn btn-success">Encomendar</a>
+                <h5 class="card-title">Produtos Orgânicos</h5>
+                <p class="card-text">Alimentos cultivados de forma sustentável.</p>
               </div>
             </div>
 
-            <!--Fruta 2 -->
+            <!--Card Temperos -->
             <div class="card" style="width: 18rem;">
-              <img src="" class="card-img-top" alt="Banana">
+              <img src="Images/Temperos.jpg" class="card-img-top" alt="Temperos">
               <div class="card-body text-center">
-                <h5 class="card-title">Banana</h5>
-                <p class="card-text">Descrição...</p>
-                <p class="fw-bold text-success">R$4,20</p>
-                <a href="#" class="btn btn-success">Encomendar</a>
+                <h5 class="card-title">Temperos</h5>
+                <p class="card-text">Ervas e especiarias naturais para suas receitas.</p>
               </div>
             </div>
 
-            <!--Fruta 3-->
+            <!--Confira Agora-->
             <div class="card" style="width: 18rem;">
-              <img src="" class="card-img-top" alt="Laranja">
+              <img src="Images/Confira agora.png" class="card-img-top" alt="Confira Agora">
               <div class="card-body text-center">
-                <h5 class="card-title">Laranja</h5>
-                <p class="card-text">Descrição...</p>
-                <p class="fw-bold text-success">R$3,90</p>
-                <a href="#" class="btn btn-success">Encomendar</a>
+                <p class="card-text">Venha conferir agoragit add .!</p>
+                <a href="produtos.php" class="btn btn-success w-100">Ver produtos</a>
               </div>
             </div>
 

@@ -16,26 +16,42 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
     
     <!-- CSS Personalizado -->
      <link rel="stylesheet" href="CSS/cooperativismo.css" />
+     
 </head>
 <body>
     <!-- Menu -->
-    <?php include 'includes/_menu.php'; ?>
+    <?php include 'includes/_segundo_menu.php'; ?>
 
     <!-- Hero Section -->
-    <section class="hero-section">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-8">
-                    <h1 class="display-4 fw-bold mb-4">Cooperativismo na Agricultura</h1>
-                    <p class="lead mb-4">Unindo forças para fortalecer a agricultura familiar e impulsionar o desenvolvimento rural sustentável</p>
-                    <a href="#entenda-mais" class="btn btn-light btn-lg">Saiba Mais</a>
-                </div>
-                <div class="col-lg-4 text-center">
-                    <i class="bi bi-tree-fill" style="font-size: 8rem; opacity: 0.8;"></i>
+   <section class="hero-section">
+    <div id="carouselHero" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-inner">
+
+            <div class="carousel-item active">
+                <img src="Images/carrosselCoop.png" class="d-block w-100" style="height: 450px; object-fit: cover;">
+                <div class="carousel-caption d-none d-md-block">
+                    
                 </div>
             </div>
+
+            <div class="carousel-item">
+                <img src="Images/carrosselCoop2.png" class="d-block w-100" style="height: 450px; object-fit: cover;">
+                <div class="carousel-caption d-none d-md-block">
+                </div>
+            </div>
+
         </div>
-    </section>
+
+        <button class="carousel-control-prev" type="button" data-bs-target="#carouselHero" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon"></span>
+        </button>
+
+        <button class="carousel-control-next" type="button" data-bs-target="#carouselHero" data-bs-slide="next">
+            <span class="carousel-control-next-icon"></span>
+        </button>
+    </div>
+</section>
+
 
     <!-- Conteúdo Principal -->
     <div class="container" id="entenda-mais">
