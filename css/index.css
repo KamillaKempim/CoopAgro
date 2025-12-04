@@ -66,15 +66,16 @@ nav a {
 main {
   width: 90%;
   max-width: 100000px;
-  margin: opx auto;
-  padding: opx;
+  margin: 0 auto;
+  padding: 0;
+  position: relative;
 }
 
 .bloco {
   background: #143d0f;
   border-radius: 30px;
   padding: 0px;
-  margin: 0px 0;
+  margin: 0;
 }
 
 .msn {
@@ -115,12 +116,13 @@ main {
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
-  padding: 10px 10px;
-  margin-bottom: 0px;
+  padding: 10px;
+  margin-bottom: 0;
   min-height: 30px;
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 15px;
   border-radius: 30px;
   overflow: hidden;
 }
@@ -133,12 +135,11 @@ main {
 
 .texto {
   width: 500%;
-  padding: 8px;
-  font-family: var(--fonte-texto);
-}
-
-main {
-  position: relative;
+  padding: 10px 15px;
+  border: 2px solid #faf5f5;
+  background-color: transparent;
+  border-radius: 8px;
+  box-sizing: border-box;
 }
 
 .hero {
@@ -155,25 +156,11 @@ main {
 }
 
 
-.container {
-  display: flex; /* coloca lado a lado */
-  align-items: center; /* alinha verticalmente */
-  gap: 15px; /* espaço entre foto e texto */
-}
-
 .foto {
   width: 200px;
   height: auto;
 }
 
-.texto {
-  padding: 10px 15px; /* espaço dentro do quadrado */
-  border: 2px solid #faf5f5; /* cria o quadrado */
-  background-color: transparent; /* transparente */
-  border-radius: 8px;
-  box-sizing: border-box;
-  font-family: var(--fonte-texto);
-}
 
 #produtos #carouselProdutos {
   border: 2px solid #faf5f5;  /* borda fina */
