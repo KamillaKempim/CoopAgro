@@ -19,6 +19,13 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
      
 </head>
 <body>
+
+    <!-- VLibras -->
+  <div vw class="enabled">
+    <div vw-access-button class="active"></div>
+    <div vw-plugin-wrapper></div>
+  </div>
+
     <!-- Menu -->
     <?php include 'includes/_segundo_menu.php'; ?>
 
@@ -353,5 +360,9 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
             observer.observe(card);
         });
     </script>
+    <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+  <script>
+    new window.VLibras.Widget('https://vlibras.gov.br/app');
+  </script>
 </body>
 </html>

@@ -7,6 +7,13 @@
     <title>Termos de Uso e Política de Privacidade - CoopAgro</title>
 </head>
 <body>
+
+<!-- VLibras -->
+  <div vw class="enabled">
+    <div vw-access-button class="active"></div>
+    <div vw-plugin-wrapper></div>
+  </div>
+
     <div class="container">
         <header>
             <h1>Termos de Uso e Política de Privacidade</h1>
@@ -154,5 +161,11 @@
             <p>Última atualização: 01/10/2025</p>
         </footer>
     </div>
+
+     <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+  <script>
+    new window.VLibras.Widget('https://vlibras.gov.br/app');
+  </script>
+  
 </body>
 </html>

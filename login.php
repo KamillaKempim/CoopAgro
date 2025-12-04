@@ -51,6 +51,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="css/Login.css" rel="stylesheet">
 </head>
 <body style="background-color: #064420;">
+
+<!-- VLibras -->
+  <div vw class="enabled">
+    <div vw-access-button class="active"></div>
+    <div vw-plugin-wrapper></div>
+  </div>
+
    <header>
     <?php require_once "includes/_menu.php"; ?>
   </header>
@@ -91,3 +98,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <footer>
     <?php require_once "includes/_footer.php" ?>
   </footer>
+ <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+  <script>
+    new window.VLibras.Widget('https://vlibras.gov.br/app');
+  </script>
+  </body>

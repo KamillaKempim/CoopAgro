@@ -11,6 +11,12 @@
 </head>
 
 <body>
+
+   <div vw class="enabled">
+    <div vw-access-button class="active"></div>
+    <div vw-plugin-wrapper></div>
+  </div>
+
   <header>
     <?php require_once "includes/_menu.php"; ?>
   </header>
@@ -186,6 +192,10 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+  <script>
+    new window.VLibras.Widget('https://vlibras.gov.br/app');
+  </script>
 </body>
 
 </html>
