@@ -298,3 +298,74 @@ main {
 .footer-custom p {
   color: var(--verde-principal);
 }
+
+/* Botão de acessibilidade */
+.painel-flutuante {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+
+#btnAbrir {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  background-color: #0c7534;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  transition: all 0.2s;
+}
+
+#btnAbrir:hover {
+  background-color: #0b7d44;
+}
+
+
+.painel-acessibilidade {
+  display: none; 
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  background: #ffffff;
+  color:rgb(11, 66, 5);
+  padding: 12px 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+
+.painel-acessibilidade button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: all 0.2s;
+  background-color: #f0f0f0;
+}
+
+.painel-acessibilidade button:hover {
+  background-color: #d4d4d4;
+}
+
+
+.modo-contraste, 
+.modo-contraste * {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+}
+
+.modo-contraste a {
+  color: #FFD700 !important;
+  text-decoration: underline;
+}
+
+.modo-contraste img {
+  filter: brightness(0.8) !important;
+}
