@@ -123,7 +123,7 @@
             <div class="card" style="width: 18rem;">
               <img src="Images/Confira agora.png" class="card-img-top" alt="Confira Agora">
               <div class="card-body text-center">
-                <p class="card-text">Venha conferir agoragit add .!</p>
+                <p class="card-text">Venha conferir agora!</p>
                 <a href="produtos.php" class="btn btn-success w-100">Ver produtos</a>
               </div>
             </div>
