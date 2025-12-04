@@ -1,24 +1,60 @@
 <?php
+// Arquivo: perfil.php (raiz)
+// Correções: Proteção contra XSS, validação de permissões, queries seguras
+
 require_once 'includes/auth.php';
 require_once 'config/database.php';
+
+// Verificar autenticação
 checkAuth();
 
+// Obter ID do usuário da sessão
 $usuario_id = $_SESSION['user_id'];
+
+// Verificar se usuário tem permissão para acessar este perfil
+if (isset($_GET['id']) && !isAdmin()) {
+    // Apenas administradores podem ver outros perfis
+    header("Location: perfil.php");
+    exit();
+}
+
+// Definir ID a ser consultado
+$consulta_id = isset($_GET['id']) ? intval($_GET['id']) : $usuario_id;
+
+// Verificar se o ID é válido
+if ($consulta_id <= 0) {
+    header("Location: perfil.php");
+    exit();
+}
+
+// Inicializar variáveis
 $stats = [];
 $pedidos_recentes = [];
 $produtos_pendentes = [];
 $produtos_para_validar = [];
+$error = '';
 
 try {
     $conn = getDBConnection();
     
-    // Busca dados do usuário
-    $stmt = $conn->prepare("SELECT * FROM usuarios WHERE id = ?");
-    $stmt->execute([$usuario_id]);
+    // Busca dados do usuário com prepared statement
+    $stmt = $conn->prepare("
+        SELECT id, nome, email, celular, rua, bairro, cep, numero, 
+               municipio, estado, tipo_usuario, cpf_cnpj, data_cadastro, ativo
+        FROM usuarios 
+        WHERE id = ? AND ativo = 1
+    ");
+    $stmt->execute([$consulta_id]);
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$usuario) {
         header("Location: login.php");
+        exit();
+    }
+    
+    // Verificar se usuário tem permissão para ver este perfil
+    if ($consulta_id != $usuario_id && !isAdmin()) {
+        header("Location: perfil.php");
         exit();
     }
     
@@ -29,12 +65,13 @@ try {
             SUM(total) as total_gasto,
             AVG(total) as media_pedido,
             COUNT(CASE WHEN status = 'entregue' THEN 1 END) as pedidos_entregues,
-            COUNT(CASE WHEN status = 'pendente' THEN 1 END) as pedidos_pendentes
+            COUNT(CASE WHEN status = 'pendente' THEN 1 END) as pedidos_pendentes,
+            COUNT(CASE WHEN status = 'cancelado' THEN 1 END) as pedidos_cancelados
         FROM pedidos 
         WHERE usuario_id = ?
     ");
-    $stmtStats->execute([$usuario_id]);
-    $stats = $stmtStats->fetch(PDO::FETCH_ASSOC);
+    $stmtStats->execute([$consulta_id]);
+    $stats = $stmtStats->fetch(PDO::FETCH_ASSOC) ?? [];
     
     // Busca pedidos recentes
     $stmtPedidos = $conn->prepare("
@@ -45,7 +82,7 @@ try {
         ORDER BY p.data_pedido DESC 
         LIMIT 5
     ");
-    $stmtPedidos->execute([$usuario_id]);
+    $stmtPedidos->execute([$consulta_id]);
     $pedidos_recentes = $stmtPedidos->fetchAll(PDO::FETCH_ASSOC);
     
     // Se for produtor, busca produtos pendentes de aprovação
@@ -55,8 +92,8 @@ try {
             FROM produtos_propostos 
             WHERE produtor_id = ? AND status = 'pendente'
         ");
-        $stmtProdutosPendentes->execute([$usuario_id]);
-        $produtos_pendentes = $stmtProdutosPendentes->fetch(PDO::FETCH_ASSOC);
+        $stmtProdutosPendentes->execute([$consulta_id]);
+        $produtos_pendentes = $stmtProdutosPendentes->fetch(PDO::FETCH_ASSOC) ?? ['total_pendentes' => 0];
     }
     
     // Se for administrador, busca produtos pendentes de validação
@@ -67,11 +104,24 @@ try {
             WHERE status = 'pendente'
         ");
         $stmtProdutosValidar->execute();
-        $produtos_para_validar = $stmtProdutosValidar->fetch(PDO::FETCH_ASSOC);
+        $produtos_para_validar = $stmtProdutosValidar->fetch(PDO::FETCH_ASSOC) ?? ['total_para_validar' => 0];
+        
+        // Buscar estatísticas de administrador
+        $stmtAdminStats = $conn->prepare("
+            SELECT 
+                COUNT(*) as total_usuarios,
+                COUNT(CASE WHEN tipo_usuario = 'Produtor' THEN 1 END) as total_produtores,
+                COUNT(CASE WHEN tipo_usuario = 'Comerciante' THEN 1 END) as total_comerciantes,
+                COUNT(CASE WHEN ativo = 0 THEN 1 END) as usuarios_inativos
+            FROM usuarios
+        ");
+        $stmtAdminStats->execute();
+        $admin_stats = $stmtAdminStats->fetch(PDO::FETCH_ASSOC) ?? [];
     }
     
 } catch(PDOException $e) {
-    $error = "Erro ao carregar dados: " . $e->getMessage();
+    error_log("Erro no perfil: " . $e->getMessage());
+    $error = "Erro ao carregar dados. Tente novamente mais tarde.";
 }
 ?>
 
@@ -137,8 +187,13 @@ try {
         .stat-number {
             font-size: 2rem;
             font-weight: bold;
-            color: var(--verde-principal);
         }
+        
+        .stat-card-primary .stat-number { color: var(--verde-principal); }
+        .stat-card-success .stat-number { color: #28a745; }
+        .stat-card-warning .stat-number { color: #ffc107; }
+        .stat-card-info .stat-number { color: #17a2b8; }
+        .stat-card-purple .stat-number { color: var(--roxo-admin); }
         
         .btn-profile {
             padding: 12px 25px;
@@ -260,14 +315,43 @@ try {
             background: linear-gradient(135deg, var(--roxo-admin) 0%, var(--roxo-admin-claro) 100%);
             color: white;
         }
+        
+        .border-purple {
+            border-color: var(--roxo-admin) !important;
+        }
+        
+        .text-purple {
+            color: var(--roxo-admin) !important;
+        }
+        
+        .avatar-initial {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .progress-bar-custom {
+            height: 8px;
+            border-radius: 4px;
+            background-color: #e9ecef;
+            overflow: hidden;
+        }
+        
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--verde-principal), var(--verde-secundario));
+            border-radius: 4px;
+            transition: width 0.6s ease;
+        }
     </style>
 </head>
 <body>
     <!-- VLibras -->
-  <div vw class="enabled">
-    <div vw-access-button class="active"></div>
-    <div vw-plugin-wrapper></div>
-  </div>
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper></div>
+    </div>
+    
     <?php include 'includes/_menu.php'; ?>
 
     <!-- Hero Section -->
@@ -275,12 +359,18 @@ try {
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-md-8 text-center text-md-start">
-                    <h1 class="display-5 fw-bold mb-3">Olá, <?php echo htmlspecialchars(explode(' ', $usuario['nome'])[0]); ?>!</h1>
+                    <h1 class="display-5 fw-bold mb-3">
+                        <?php if ($consulta_id == $usuario_id): ?>
+                            Olá, <?php echo htmlspecialchars(explode(' ', $usuario['nome'])[0]); ?>!
+                        <?php else: ?>
+                            Perfil de <?php echo htmlspecialchars($usuario['nome']); ?>
+                        <?php endif; ?>
+                    </h1>
                     <p class="lead mb-4">
                         <?php if ($usuario['tipo_usuario'] === 'Administrador'): ?>
-                            Bem-vindo(a) ao painel administrativo da CoopAgro
+                            <?php echo ($consulta_id == $usuario_id) ? 'Bem-vindo(a) ao painel administrativo' : 'Painel administrativo'; ?>
                         <?php else: ?>
-                            Bem-vindo(a) ao seu painel na CoopAgro
+                            <?php echo ($consulta_id == $usuario_id) ? 'Bem-vindo(a) ao seu painel' : 'Painel do usuário'; ?>
                         <?php endif; ?>
                     </p>
                     <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start">
@@ -298,61 +388,77 @@ try {
                             <i class="bi bi-calendar-check"></i> 
                             Membro desde <?php echo date('m/Y', strtotime($usuario['data_cadastro'])); ?>
                         </span>
-                        <?php if ($usuario['tipo_usuario'] === 'Produtor' && isset($produtos_pendentes['total_pendentes'])): ?>
-                            <span class="badge bg-warning text-dark fs-6">
-                                <i class="bi bi-clock-history"></i> 
-                                <?php echo $produtos_pendentes['total_pendentes']; ?> produtos aguardando análise
+                        <?php if (!$usuario['ativo']): ?>
+                            <span class="badge bg-danger text-white fs-6">
+                                <i class="bi bi-exclamation-triangle"></i> 
+                                Conta Inativa
                             </span>
                         <?php endif; ?>
-                        <?php if ($usuario['tipo_usuario'] === 'Administrador' && isset($produtos_para_validar['total_para_validar'])): ?>
+                        <?php if ($usuario['tipo_usuario'] === 'Produtor' && isset($produtos_pendentes['total_pendentes']) && $produtos_pendentes['total_pendentes'] > 0): ?>
+                            <span class="badge bg-warning text-dark fs-6">
+                                <i class="bi bi-clock-history"></i> 
+                                <?php echo intval($produtos_pendentes['total_pendentes']); ?> produtos aguardando análise
+                            </span>
+                        <?php endif; ?>
+                        <?php if ($usuario['tipo_usuario'] === 'Administrador' && isset($produtos_para_validar['total_para_validar']) && $produtos_para_validar['total_para_validar'] > 0): ?>
                             <span class="badge bg-warning text-dark fs-6">
                                 <i class="bi bi-shield-check"></i> 
-                                <?php echo $produtos_para_validar['total_para_validar']; ?> produtos para validar
+                                <?php echo intval($produtos_para_validar['total_para_validar']); ?> produtos para validar
                             </span>
                         <?php endif; ?>
                     </div>
                 </div>
                 <div class="col-md-4 text-center">
                     <div class="user-avatar">
-                        <i class="bi bi-person-circle"></i>
+                        <div class="avatar-initial">
+                            <?php echo strtoupper(substr($usuario['nome'], 0, 1)); ?>
+                        </div>
                     </div>
+                    <?php if ($consulta_id == $usuario_id): ?>
+                        <a href="editar_perfil.php" class="btn btn-light btn-sm mt-2">
+                            <i class="bi bi-pencil"></i> Editar Perfil
+                        </a>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </section>
 
     <div class="container">
-        <?php if (isset($error)): ?>
-            <div class="alert alert-danger"><?php echo $error; ?></div>
+        <?php if (isset($error) && !empty($error)): ?>
+            <div class="alert alert-danger alert-dismissible fade show">
+                <?php echo htmlspecialchars($error); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
         <?php endif; ?>
 
         <!-- Estatísticas Rápidas -->
         <div class="row mb-5">
             <div class="col-md-3 mb-4">
-                <div class="card stat-card text-center p-4">
+                <div class="card stat-card stat-card-primary text-center p-4">
                     <i class="bi bi-cart-check stat-icon text-primary"></i>
-                    <div class="stat-number"><?php echo $stats['total_pedidos'] ?? 0; ?></div>
+                    <div class="stat-number"><?php echo isset($stats['total_pedidos']) ? intval($stats['total_pedidos']) : 0; ?></div>
                     <p class="text-muted mb-0">Total de Pedidos</p>
                 </div>
             </div>
             <div class="col-md-3 mb-4">
-                <div class="card stat-card text-center p-4">
+                <div class="card stat-card stat-card-success text-center p-4">
                     <i class="bi bi-currency-dollar stat-icon text-success"></i>
-                    <div class="stat-number">R$ <?php echo number_format($stats['total_gasto'] ?? 0, 2, ',', '.'); ?></div>
+                    <div class="stat-number">R$ <?php echo isset($stats['total_gasto']) ? number_format($stats['total_gasto'], 2, ',', '.') : '0,00'; ?></div>
                     <p class="text-muted mb-0">Total Gasto</p>
                 </div>
             </div>
             <div class="col-md-3 mb-4">
-                <div class="card stat-card text-center p-4">
+                <div class="card stat-card stat-card-warning text-center p-4">
                     <i class="bi bi-truck stat-icon text-warning"></i>
-                    <div class="stat-number"><?php echo $stats['pedidos_entregues'] ?? 0; ?></div>
+                    <div class="stat-number"><?php echo isset($stats['pedidos_entregues']) ? intval($stats['pedidos_entregues']) : 0; ?></div>
                     <p class="text-muted mb-0">Pedidos Entregues</p>
                 </div>
             </div>
             <div class="col-md-3 mb-4">
-                <div class="card stat-card text-center p-4">
+                <div class="card stat-card stat-card-info text-center p-4">
                     <i class="bi bi-clock-history stat-icon text-info"></i>
-                    <div class="stat-number"><?php echo $stats['pedidos_pendentes'] ?? 0; ?></div>
+                    <div class="stat-number"><?php echo isset($stats['pedidos_pendentes']) ? intval($stats['pedidos_pendentes']) : 0; ?></div>
                     <p class="text-muted mb-0">Pedidos Pendentes</p>
                 </div>
             </div>
@@ -362,21 +468,25 @@ try {
             <!-- Ações Rápidas -->
             <div class="col-lg-4 mb-4">
                 <div class="quick-actions h-100 <?php echo $usuario['tipo_usuario'] === 'Administrador' ? 'admin-quick-actions' : ''; ?>">
-                    <h3 class="section-title <?php echo $usuario['tipo_usuario'] === 'Administrador' ? 'admin-section-title' : ''; ?>">Ações Rápidas</h3>
+                    <h3 class="section-title <?php echo $usuario['tipo_usuario'] === 'Administrador' ? 'admin-section-title' : ''; ?>">
+                        <i class="bi bi-lightning"></i> Ações Rápidas
+                    </h3>
                     
                     <div class="d-grid gap-3">
-                        <a href="editar_perfil.php" class="btn btn-edit btn-profile">
-                            <i class="bi bi-pencil-square"></i> Editar Perfil
-                        </a>
+                        <?php if ($consulta_id == $usuario_id): ?>
+                            <a href="editar_perfil.php" class="btn btn-edit btn-profile">
+                                <i class="bi bi-pencil-square"></i> Editar Perfil
+                            </a>
+                        <?php endif; ?>
                         
-                        <a href="meus_pedidos.php" class="btn btn-orders btn-profile">
-                            <i class="bi bi-list-check"></i> Meu pedidos - testes
+                        <a href="meus_pedidos.php<?php echo $consulta_id != $usuario_id ? '?usuario_id=' . $consulta_id : ''; ?>" 
+                           class="btn btn-orders btn-profile">
+                            <i class="bi bi-list-check"></i> Meus Pedidos
                         </a>
 
-                        <a href="admin_pedidos.php" class="btn btn-success btn-profile">
-                            <i class="bi bi-cart-plus"></i> Gerenciar pedidos
+                        <a href="produtos.php" class="btn btn-success btn-profile">
+                            <i class="bi bi-cart-plus"></i> Comprar Produtos
                         </a>
-                        
                         
                         <?php if ($usuario['tipo_usuario'] === 'Produtor'): ?>
                             <!-- Ações específicas para produtores -->
@@ -387,7 +497,7 @@ try {
                             <a href="minhas_propostas.php" class="btn btn-outline-warning btn-profile">
                                 <i class="bi bi-clock-history"></i> Minhas Propostas
                                 <?php if (isset($produtos_pendentes['total_pendentes']) && $produtos_pendentes['total_pendentes'] > 0): ?>
-                                    <span class="badge bg-danger ms-2"><?php echo $produtos_pendentes['total_pendentes']; ?></span>
+                                    <span class="badge bg-danger ms-2"><?php echo intval($produtos_pendentes['total_pendentes']); ?></span>
                                 <?php endif; ?>
                             </a>
                             
@@ -400,16 +510,12 @@ try {
                             <a href="validacao_produtos.php" class="btn btn-admin btn-profile">
                                 <i class="bi bi-shield-check"></i> Validar Produtos
                                 <?php if (isset($produtos_para_validar['total_para_validar']) && $produtos_para_validar['total_para_validar'] > 0): ?>
-                                    <span class="badge bg-warning ms-2"><?php echo $produtos_para_validar['total_para_validar']; ?></span>
+                                    <span class="badge bg-warning ms-2"><?php echo intval($produtos_para_validar['total_para_validar']); ?></span>
                                 <?php endif; ?>
                             </a>
                             
-                            <a href="editar_produto.php" class="btn btn-admin-outline btn-profile">
-                                <i class="bi bi-pencil-square"></i> Editar Produtos
-                            </a>
-                            
-                            <a href="excluir_produto.php" class="btn btn-outline-danger btn-profile">
-                                <i class="bi bi-trash"></i> Excluir Produtos
+                            <a href="admin_pedidos.php" class="btn btn-admin-outline btn-profile">
+                                <i class="bi bi-cart"></i> Gerenciar Pedidos
                             </a>
                             
                             <a href="admin_usuarios.php" class="btn btn-outline-info btn-profile">
@@ -433,13 +539,16 @@ try {
                     </div>
                     
                     <div class="mt-4 pt-3 border-top">
-                        <h5 class="fw-bold mb-3">Suporte</h5>
+                        <h5 class="fw-bold mb-3"><i class="bi bi-headset"></i> Suporte</h5>
                         <div class="d-grid gap-2">
                             <a href="contato.php" class="btn btn-outline-primary btn-sm">
                                 <i class="bi bi-headset"></i> Central de Ajuda
                             </a>
                             <a href="politica.php" class="btn btn-outline-secondary btn-sm">
                                 <i class="bi bi-shield-check"></i> Política de Privacidade
+                            </a>
+                            <a href="logout.php" class="btn btn-outline-danger btn-sm mt-2">
+                                <i class="bi bi-box-arrow-right"></i> Sair
                             </a>
                         </div>
                     </div>
@@ -450,7 +559,9 @@ try {
             <div class="col-lg-4 mb-4">
                 <div class="card info-card h-100">
                     <div class="card-body">
-                        <h3 class="section-title <?php echo $usuario['tipo_usuario'] === 'Administrador' ? 'admin-section-title' : ''; ?>">Informações Pessoais</h3>
+                        <h3 class="section-title <?php echo $usuario['tipo_usuario'] === 'Administrador' ? 'admin-section-title' : ''; ?>">
+                            <i class="bi bi-person-lines-fill"></i> Informações Pessoais
+                        </h3>
                         
                         <div class="mb-3">
                             <strong><i class="bi bi-person me-2"></i>Nome Completo:</strong>
@@ -485,6 +596,11 @@ try {
                                 </span>
                             </p>
                         </div>
+                        
+                        <div class="mb-3">
+                            <strong><i class="bi bi-calendar me-2"></i>Data de Cadastro:</strong>
+                            <p class="mb-0"><?php echo date('d/m/Y H:i', strtotime($usuario['data_cadastro'])); ?></p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -493,7 +609,9 @@ try {
             <div class="col-lg-4 mb-4">
                 <div class="card info-card h-100">
                     <div class="card-body">
-                        <h3 class="section-title <?php echo $usuario['tipo_usuario'] === 'Administrador' ? 'admin-section-title' : ''; ?>">Endereço de Entrega</h3>
+                        <h3 class="section-title <?php echo $usuario['tipo_usuario'] === 'Administrador' ? 'admin-section-title' : ''; ?>">
+                            <i class="bi bi-geo-alt-fill"></i> Endereço de Entrega
+                        </h3>
                         
                         <div class="mb-3">
                             <strong><i class="bi bi-geo-alt me-2"></i>Endereço:</strong>
@@ -517,11 +635,13 @@ try {
                             <p class="mb-2"><?php echo htmlspecialchars($usuario['cep']); ?></p>
                         </div>
                         
-                        <div class="mt-4">
-                            <a href="editar_perfil.php" class="btn btn-outline-success btn-sm">
-                                <i class="bi bi-pencil"></i> Atualizar Endereço
-                            </a>
-                        </div>
+                        <?php if ($consulta_id == $usuario_id): ?>
+                            <div class="mt-4">
+                                <a href="editar_perfil.php" class="btn btn-outline-success btn-sm">
+                                    <i class="bi bi-pencil"></i> Atualizar Endereço
+                                </a>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -539,23 +659,30 @@ try {
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-3 mb-3">
                                 <div class="card stat-card text-center p-4 border-purple">
                                     <i class="bi bi-box-seam stat-icon text-purple"></i>
-                                    <div class="stat-number text-purple"><?php echo $produtos_para_validar['total_para_validar'] ?? 0; ?></div>
+                                    <div class="stat-number text-purple"><?php echo isset($produtos_para_validar['total_para_validar']) ? intval($produtos_para_validar['total_para_validar']) : 0; ?></div>
                                     <p class="text-muted mb-0">Produtos para Validar</p>
                                     <a href="validacao_produtos.php" class="btn btn-admin btn-sm mt-2">Ver Detalhes</a>
                                 </div>
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-3 mb-3">
                                 <div class="card stat-card text-center p-4">
                                     <i class="bi bi-people stat-icon text-info"></i>
-                                    <div class="stat-number">0</div>
+                                    <div class="stat-number"><?php echo isset($admin_stats['total_usuarios']) ? intval($admin_stats['total_usuarios']) : 0; ?></div>
                                     <p class="text-muted mb-0">Usuários Ativos</p>
                                     <a href="admin_usuarios.php" class="btn btn-outline-info btn-sm mt-2">Gerenciar</a>
                                 </div>
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-3 mb-3">
+                                <div class="card stat-card text-center p-4">
+                                    <i class="bi bi-shop stat-icon text-warning"></i>
+                                    <div class="stat-number"><?php echo isset($admin_stats['total_produtores']) ? intval($admin_stats['total_produtores']) : 0; ?></div>
+                                    <p class="text-muted mb-0">Produtores</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
                                 <div class="card stat-card text-center p-4">
                                     <i class="bi bi-graph-up stat-icon text-success"></i>
                                     <div class="stat-number">R$ 0,00</div>
@@ -575,9 +702,17 @@ try {
             <div class="col-12">
                 <div class="card">
                     <div class="card-header bg-light">
-                        <h3 class="section-title mb-0">
-                            <i class="bi bi-clock-history"></i> Pedidos Recentes
-                        </h3>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 class="section-title mb-0">
+                                <i class="bi bi-clock-history"></i> Pedidos Recentes
+                            </h3>
+                            <?php if (count($pedidos_recentes) > 0): ?>
+                                <a href="meus_pedidos.php<?php echo $consulta_id != $usuario_id ? '?usuario_id=' . $consulta_id : ''; ?>" 
+                                   class="btn btn-outline-success btn-sm">
+                                    Ver Todos
+                                </a>
+                            <?php endif; ?>
+                        </div>
                     </div>
                     <div class="card-body">
                         <?php if (empty($pedidos_recentes)): ?>
@@ -606,11 +741,21 @@ try {
                                                 <td>
                                                     <div class="d-flex align-items-center">
                                                         <?php 
-                                                        $imagemSrc = !empty($pedido['imagem_url']) ? 
-                                                            'uploads/produtos/' . htmlspecialchars($pedido['imagem_url']) : 
-                                                            'https://via.placeholder.com/50x50/CCCCCC/969696?text=Produto';
+                                                        $imagemSrc = 'https://via.placeholder.com/50x50/CCCCCC/969696?text=Produto';
+                                                        if (!empty($pedido['imagem_url'])) {
+                                                            // Verificar se é uma URL completa ou caminho relativo
+                                                            if (filter_var($pedido['imagem_url'], FILTER_VALIDATE_URL)) {
+                                                                $imagemSrc = $pedido['imagem_url'];
+                                                            } else {
+                                                                // Verificar se o arquivo existe localmente
+                                                                $caminhoLocal = 'uploads/produtos/' . basename($pedido['imagem_url']);
+                                                                if (file_exists($caminhoLocal) && is_file($caminhoLocal)) {
+                                                                    $imagemSrc = $caminhoLocal;
+                                                                }
+                                                            }
+                                                        }
                                                         ?>
-                                                        <img src="<?php echo $imagemSrc; ?>" 
+                                                        <img src="<?php echo htmlspecialchars($imagemSrc); ?>" 
                                                              alt="<?php echo htmlspecialchars($pedido['produto_nome']); ?>"
                                                              class="rounded me-3" 
                                                              width="50" 
@@ -622,15 +767,15 @@ try {
                                                     </div>
                                                 </td>
                                                 <td><?php echo date('d/m/Y H:i', strtotime($pedido['data_pedido'])); ?></td>
-                                                <td><?php echo $pedido['quantidade']; ?> un.</td>
+                                                <td><?php echo intval($pedido['quantidade']); ?> un.</td>
                                                 <td>R$ <?php echo number_format($pedido['total'], 2, ',', '.'); ?></td>
                                                 <td>
-                                                    <span class="status-badge badge-<?php echo $pedido['status']; ?>">
-                                                        <?php echo ucfirst($pedido['status']); ?>
+                                                    <span class="status-badge badge-<?php echo htmlspecialchars($pedido['status']); ?>">
+                                                        <?php echo ucfirst(htmlspecialchars($pedido['status'])); ?>
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <a href="detalhes_pedido.php?id=<?php echo $pedido['id']; ?>" 
+                                                    <a href="detalhes_pedido.php?id=<?php echo intval($pedido['id']); ?>" 
                                                        class="btn btn-outline-primary btn-sm">
                                                         <i class="bi bi-eye"></i> Detalhes
                                                     </a>
@@ -639,11 +784,6 @@ try {
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
-                            </div>
-                            <div class="text-center mt-3">
-                                <a href="meus_pedidos.php" class="btn btn-outline-success">
-                                    <i class="bi bi-list-ul"></i> Ver Todos os Pedidos
-                                </a>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -674,8 +814,8 @@ try {
         });
     </script>
     <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
-  <script>
-    new window.VLibras.Widget('https://vlibras.gov.br/app');
-  </script>
+    <script>
+        new window.VLibras.Widget('https://vlibras.gov.br/app');
+    </script>
 </body>
 </html>

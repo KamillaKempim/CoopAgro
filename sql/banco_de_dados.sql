@@ -1,5 +1,9 @@
-create database coopagro;
-use coopagro;
+-- Arquivo: sql/banco_de_dados.sql
+-- Correções: Adicionado campos de segurança e timestamp para último login
+
+CREATE DATABASE IF NOT EXISTS coopagro CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE coopagro;
+
 -- Configurações iniciais para UTF-8
 SET NAMES utf8mb4;
 SET CHARACTER SET utf8mb4;
@@ -27,10 +31,19 @@ CREATE TABLE `usuarios` (
   `estado` varchar(2) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `tipo_usuario` enum('Produtor','Comerciante','Administrador') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Comerciante',
   `cpf_cnpj` varchar(18) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `ativo` tinyint(1) NOT NULL DEFAULT '1',
+  `email_verificado` tinyint(1) NOT NULL DEFAULT '0',
+  `tentativas_login` int NOT NULL DEFAULT '0',
+  `bloqueado_ate` datetime DEFAULT NULL,
+  `ultimo_login` datetime DEFAULT NULL,
+  `token_recuperacao` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `token_expiracao` datetime DEFAULT NULL,
   `data_cadastro` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`),
-  UNIQUE KEY `cpf_cnpj` (`cpf_cnpj`)
+  UNIQUE KEY `cpf_cnpj` (`cpf_cnpj`),
+  KEY `idx_ativo` (`ativo`),
+  KEY `idx_tipo_usuario` (`tipo_usuario`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -48,9 +61,17 @@ CREATE TABLE `produtos` (
   `quantidade_estoque` int NOT NULL DEFAULT '0',
   `imagem_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `disponivel` tinyint(1) NOT NULL DEFAULT '1',
+  `criado_por` int DEFAULT NULL,
+  `aprovado_por` int DEFAULT NULL,
+  `data_aprovacao` datetime DEFAULT NULL,
   `data_criacao` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `data_atualizacao` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `criado_por` (`criado_por`),
+  KEY `aprovado_por` (`aprovado_por`),
+  KEY `idx_disponivel` (`disponivel`),
+  CONSTRAINT `produtos_ibfk_1` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `produtos_ibfk_2` FOREIGN KEY (`aprovado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -95,10 +116,29 @@ CREATE TABLE `produtos_propostos` (
   `observacoes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   `data_criacao` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `data_avaliacao` timestamp NULL DEFAULT NULL,
+  `avaliado_por` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `produtor_id` (`produtor_id`),
-  CONSTRAINT `produtos_propostos_ibfk_1` FOREIGN KEY (`produtor_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE
+  KEY `avaliado_por` (`avaliado_por`),
+  CONSTRAINT `produtos_propostos_ibfk_1` FOREIGN KEY (`produtor_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `produtos_propostos_ibfk_2` FOREIGN KEY (`avaliado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabela para logs de segurança
+DROP TABLE IF EXISTS `logs_seguranca`;
+CREATE TABLE `logs_seguranca` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `usuario_id` int DEFAULT NULL,
+  `acao` varchar(100) NOT NULL,
+  `detalhes` text,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `user_agent` text,
+  `data_criacao` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `usuario_id` (`usuario_id`),
+  KEY `idx_data_criacao` (`data_criacao`),
+  CONSTRAINT `logs_seguranca_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Restaurar restrições de chaves estrangeiras
 SET FOREIGN_KEY_CHECKS = 1;
@@ -107,6 +147,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 ALTER DATABASE coopagro CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- Inserir usuário administrador padrão
+-- Senha: Admin@123456 (deve ser alterada no primeiro login)
 INSERT INTO `usuarios` (
   `nome`, 
   `email`, 
@@ -119,10 +160,12 @@ INSERT INTO `usuarios` (
   `municipio`, 
   `estado`, 
   `tipo_usuario`, 
-  `cpf_cnpj`
+  `cpf_cnpj`,
+  `email_verificado`,
+  `ativo`
 ) VALUES (
   'Administrador Sistema',
-  'jhiewertton@gmail.com',
+  'admin@coopagro.com',
   '11999999999',
   '$2y$10$5PedvrP7cOSsj444y.KtF.Vfmv4PQtTlQMXfm4p/tL.pCJAT7gRPe', 
   'Rua Administrativa',
@@ -132,9 +175,12 @@ INSERT INTO `usuarios` (
   'São Paulo',
   'SP',
   'Administrador',
-  '12345678900'
+  '12345678900',
+  1,
+  1
 );
 
 -- Mensagem de confirmação
 SELECT 'Banco de dados CoopAgro criado com sucesso!' AS 'Status';
-SELECT 'Usuário administrador: jhiewertton@gmail.com' AS 'Credenciais';
+SELECT 'Usuário administrador: admin@coopagro.com' AS 'Credenciais';
+SELECT 'ATENÇÃO: Altere a senha do administrador no primeiro login!' AS 'Aviso';

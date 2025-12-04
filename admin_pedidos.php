@@ -2,10 +2,10 @@
 require_once 'includes/auth.php';
 require_once 'config/database.php';
 checkAuth();
-// Verificar se o usuário é administrador
-$usuario_id = $_SESSION['user_id'];
 
-// Verifica se o usuário é produtor
+// Verificar se o usuário é administrador
+$usuario_id = intval($_SESSION['user_id']);
+
 try {
     $conn = getDBConnection();
     $stmt = $conn->prepare("SELECT tipo_usuario, nome FROM usuarios WHERE id = ?");
@@ -13,26 +13,55 @@ try {
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($usuario['tipo_usuario'] !== 'Administrador') {
+        $_SESSION['error'] = 'Acesso restrito a administradores.';
         header("Location: perfil.php");
         exit();
     }
 } catch(PDOException $e) {
-    die("Erro ao verificar tipo de usuário: " . $e->getMessage());
+    die("Erro ao verificar tipo de usuário: " . htmlspecialchars($e->getMessage()));
 }
 
 try {
     $conn = getDBConnection();
     
     // Processar atualização de status
-    if (isset($_POST['atualizar_status'])) {
-        $pedido_id = $_POST['pedido_id'];
-        $novo_status = $_POST['novo_status'];
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['atualizar_status'])) {
+        // Verifica token CSRF
+        if (!verifyCSRFToken($_POST['csrf_token'])) {
+            $_SESSION['error'] = 'Token CSRF inválido.';
+            header("Location: admin_pedidos.php");
+            exit();
+        }
+        
+        $pedido_id = intval($_POST['pedido_id']);
+        $novo_status = sanitizeInput($_POST['novo_status']);
+        
+        // Validar status
+        $status_validos = ['pendente', 'confirmado', 'preparando', 'enviado', 'entregue', 'cancelado'];
+        if (!in_array($novo_status, $status_validos)) {
+            $_SESSION['error'] = 'Status inválido.';
+            header("Location: admin_pedidos.php");
+            exit();
+        }
+        
+        // Verificar se o pedido existe
+        $checkStmt = $conn->prepare("SELECT id FROM pedidos WHERE id = ?");
+        $checkStmt->execute([$pedido_id]);
+        
+        if ($checkStmt->rowCount() === 0) {
+            $_SESSION['error'] = 'Pedido não encontrado.';
+            header("Location: admin_pedidos.php");
+            exit();
+        }
         
         // Atualizar status do pedido
         $updateStmt = $conn->prepare("UPDATE pedidos SET status = ? WHERE id = ?");
         $updateStmt->execute([$novo_status, $pedido_id]);
         
-        // Recarregar a página após atualização
+        // Log da ação
+        logSecurity($usuario_id, 'status_pedido_atualizado', "Pedido #{$pedido_id} atualizado para {$novo_status}");
+        
+        $_SESSION['success'] = "Status do pedido #{$pedido_id} atualizado com sucesso!";
         header("Location: admin_pedidos.php");
         exit();
     }
@@ -43,8 +72,10 @@ try {
             p.*, 
             pr.nome as produto_nome, 
             pr.imagem_url,
+            pr.unidade_medida,
             u.nome as usuario_nome,
-            u.email as usuario_email
+            u.email as usuario_email,
+            u.celular as usuario_celular
         FROM pedidos p 
         INNER JOIN produtos pr ON p.produto_id = pr.id 
         INNER JOIN usuarios u ON p.usuario_id = u.id
@@ -53,13 +84,13 @@ try {
     $stmt->execute();
     $pedidos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Estatísticas para o dashboard - CORREÇÃO AQUI: mudado "preparandos" para "preparando"
+    // Estatísticas para o dashboard
     $statsStmt = $conn->prepare("
         SELECT 
             COUNT(*) as total_pedidos,
             SUM(CASE WHEN status = 'pendente' THEN 1 ELSE 0 END) as pendentes,
             SUM(CASE WHEN status = 'confirmado' THEN 1 ELSE 0 END) as confirmados,
-            SUM(CASE WHEN status = 'preparando' THEN 1 ELSE 0 END) as preparando,  -- CORRIGIDO
+            SUM(CASE WHEN status = 'preparando' THEN 1 ELSE 0 END) as preparando,
             SUM(CASE WHEN status = 'enviado' THEN 1 ELSE 0 END) as enviados,
             SUM(CASE WHEN status = 'entregue' THEN 1 ELSE 0 END) as entregues,
             SUM(CASE WHEN status = 'cancelado' THEN 1 ELSE 0 END) as cancelados,
@@ -70,7 +101,8 @@ try {
     $estatisticas = $statsStmt->fetch(PDO::FETCH_ASSOC);
     
 } catch(PDOException $e) {
-    $error = "Erro ao carregar pedidos: " . $e->getMessage();
+    $error = "Erro ao carregar pedidos: " . htmlspecialchars($e->getMessage());
+    logSecurity($usuario_id, 'erro_admin_pedidos', "Erro: " . $e->getMessage());
 }
 
 // Opções de status disponíveis
@@ -83,7 +115,7 @@ $status_opcoes = [
     'cancelado' => 'Cancelado'
 ];
 
-// Garantir que todas as chaves do array de estatísticas existam para evitar outros warnings
+// Garantir que todas as chaves do array de estatísticas existam
 $estatisticas_defaults = [
     'total_pedidos' => 0,
     'pendentes' => 0,
@@ -95,7 +127,6 @@ $estatisticas_defaults = [
     'valor_total' => 0
 ];
 
-// Mesclar com valores padrão para evitar undefined array key
 if (isset($estatisticas)) {
     $estatisticas = array_merge($estatisticas_defaults, $estatisticas);
 } else {
@@ -111,7 +142,14 @@ if (isset($estatisticas)) {
     <title>Gestão de Pedidos - Admin - CoopAgro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
+        :root {
+            --verde-principal: #2e7d32;
+            --verde-secundario: #4caf50;
+            --verde-claro: #a5d6a7;
+        }
+        
         .card-dashboard {
             transition: transform 0.3s;
             border-radius: 10px;
@@ -134,8 +172,9 @@ if (isset($estatisticas)) {
             padding: 0.3rem 0.6rem;
         }
         .filter-active {
-            background-color: #0d6efd !important;
+            background-color: var(--verde-principal) !important;
             color: white !important;
+            border-color: var(--verde-principal) !important;
         }
         .product-image {
             width: 60px;
@@ -151,8 +190,25 @@ if (isset($estatisticas)) {
         .badge-confirmado { background-color: #17a2b8; color: #fff; }
         .badge-preparando { background-color: #fd7e14; color: #fff; }
         .badge-enviado { background-color: #0dcaf0; color: #000; }
-        .badge-entregue { background-color: #198754; color: #fff; }
+        .badge-entregue { background-color: var(--verde-principal); color: #fff; }
         .badge-cancelado { background-color: #dc3545; color: #fff; }
+        
+        .unidade-info {
+            font-size: 0.75rem;
+            color: #666;
+        }
+        
+        .btn-export {
+            background-color: var(--verde-principal);
+            border-color: var(--verde-principal);
+            color: white;
+        }
+        
+        .btn-export:hover {
+            background-color: var(--verde-secundario);
+            border-color: var(--verde-secundario);
+            color: white;
+        }
         
         @media (max-width: 768px) {
             .table-responsive {
@@ -166,29 +222,42 @@ if (isset($estatisticas)) {
     </style>
 </head>
 <body>
-
- <!-- VLibras -->
-  <div vw class="enabled">
-    <div vw-access-button class="active"></div>
-    <div vw-plugin-wrapper></div>
-  </div>
-  
+    <!-- VLibras -->
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper></div>
+    </div>
+    
     <?php include 'includes/_menu.php'; ?>
     
     <div class="container-fluid mt-4">
         <div class="row">
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2><i class="fas fa-shopping-bag me-2"></i>Gestão de Pedidos</h2>
+                    <h2 class="text-success">
+                        <i class="fas fa-shopping-bag me-2"></i>Gestão de Pedidos
+                    </h2>
                     <div class="btn-group">
-                        <button class="btn btn-outline-primary" onclick="exportarRelatorio()">
-                            <i class="fas fa-download me-1"></i>Exportar
+                        <button class="btn btn-export" onclick="exportarRelatorio()">
+                            <i class="fas fa-download me-1"></i>Exportar Relatório
                         </button>
                     </div>
                 </div>
                 
+                <?php 
+                if (isset($_SESSION['success'])) {
+                    echo '<div class="alert alert-success">' . htmlspecialchars($_SESSION['success']) . '</div>';
+                    unset($_SESSION['success']);
+                }
+                
+                if (isset($_SESSION['error'])) {
+                    echo '<div class="alert alert-danger">' . htmlspecialchars($_SESSION['error']) . '</div>';
+                    unset($_SESSION['error']);
+                }
+                ?>
+                
                 <?php if (isset($error)): ?>
-                    <div class="alert alert-danger"><?php echo $error; ?></div>
+                    <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
                 <?php endif; ?>
                 
                 <!-- Dashboard de Estatísticas -->
@@ -252,17 +321,18 @@ if (isset($estatisticas)) {
                 <!-- Filtros -->
                 <div class="card mb-4">
                     <div class="card-body">
-                        <h5 class="card-title"><i class="fas fa-filter me-2"></i>Filtros</h5>
+                        <h5 class="card-title text-success">
+                            <i class="fas fa-filter me-2"></i>Filtros
+                        </h5>
                         <div class="btn-group flex-wrap" role="group">
-                            <button type="button" class="btn btn-outline-primary filter-btn active" data-status="todos">
+                            <button type="button" class="btn btn-outline-success filter-btn active" data-status="todos">
                                 Todos (<?php echo $estatisticas['total_pedidos']; ?>)
                             </button>
                             <?php foreach ($status_opcoes as $key => $label): 
-                                // Usar array_key_exists para evitar undefined index
                                 $count = array_key_exists($key . 's', $estatisticas) ? $estatisticas[$key . 's'] : 0;
                             ?>
-                                <button type="button" class="btn btn-outline-primary filter-btn" data-status="<?php echo $key; ?>">
-                                    <?php echo $label; ?> 
+                                <button type="button" class="btn btn-outline-success filter-btn" data-status="<?php echo htmlspecialchars($key); ?>">
+                                    <?php echo htmlspecialchars($label); ?> 
                                     (<?php echo $count; ?>)
                                 </button>
                             <?php endforeach; ?>
@@ -272,13 +342,15 @@ if (isset($estatisticas)) {
                 
                 <!-- Tabela de Pedidos -->
                 <div class="card">
-                    <div class="card-header bg-light">
-                        <h5 class="card-title mb-0"><i class="fas fa-list me-2"></i>Lista de Pedidos</h5>
+                    <div class="card-header bg-success text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-list me-2"></i>Lista de Pedidos
+                        </h5>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover mb-0" id="tabelaPedidos">
-                                <thead class="table-dark">
+                                <thead class="table-success">
                                     <tr>
                                         <th>ID</th>
                                         <th>Produto</th>
@@ -291,15 +363,19 @@ if (isset($estatisticas)) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($pedidos as $pedido): ?>
-                                        <tr class="pedido-row" data-status="<?php echo $pedido['status']; ?>">
-                                            <td><strong>#<?php echo $pedido['id']; ?></strong></td>
+                                    <?php foreach ($pedidos as $pedido): 
+                                        $unidade_texto = htmlspecialchars($pedido['unidade_medida'] ?? 'UN');
+                                        $quantidade_texto = $pedido['quantidade'] . ' ' . $unidade_texto;
+                                    ?>
+                                        <tr class="pedido-row" data-status="<?php echo htmlspecialchars($pedido['status']); ?>">
+                                            <td><strong>#<?php echo intval($pedido['id']); ?></strong></td>
                                             <td>
                                                 <div class="d-flex align-items-center">
                                                     <?php if (!empty($pedido['imagem_url'])): ?>
-                                                        <img src="<?php echo 'uploads/produtos/' . htmlspecialchars($pedido['imagem_url']); ?>"
+                                                        <img src="<?php echo htmlspecialchars('uploads/produtos/' . $pedido['imagem_url']); ?>"
                                                              class="product-image me-2" 
-                                                             alt="<?php echo htmlspecialchars($pedido['produto_nome']); ?>">
+                                                             alt="<?php echo htmlspecialchars($pedido['produto_nome']); ?>"
+                                                             onerror="this.src='https://via.placeholder.com/60x60/CCCCCC/969696?text=Imagem'">
                                                     <?php else: ?>
                                                         <div class="product-image bg-light d-flex align-items-center justify-content-center me-2">
                                                             <i class="fas fa-box text-muted"></i>
@@ -307,6 +383,8 @@ if (isset($estatisticas)) {
                                                     <?php endif; ?>
                                                     <div>
                                                         <div class="fw-bold"><?php echo htmlspecialchars($pedido['produto_nome']); ?></div>
+                                                        <small class="text-muted unidade-info"><?php echo $quantidade_texto; ?></small>
+                                                        <br>
                                                         <small class="text-muted"><?php echo htmlspecialchars($pedido['endereco_entrega']); ?></small>
                                                     </div>
                                                 </div>
@@ -314,21 +392,29 @@ if (isset($estatisticas)) {
                                             <td>
                                                 <div class="fw-bold"><?php echo htmlspecialchars($pedido['usuario_nome']); ?></div>
                                                 <small class="text-muted"><?php echo htmlspecialchars($pedido['usuario_email']); ?></small>
+                                                <br>
+                                                <small class="text-muted"><?php echo htmlspecialchars($pedido['usuario_celular']); ?></small>
                                             </td>
-                                            <td><?php echo $pedido['quantidade']; ?></td>
-                                            <td>R$ <?php echo number_format($pedido['total'], 2, ',', '.'); ?></td>
+                                            <td>
+                                                <?php echo $quantidade_texto; ?>
+                                                <br>
+                                                <small class="text-muted">R$ <?php echo number_format($pedido['preco_unitario'], 2, ',', '.'); ?>/<?php echo $unidade_texto; ?></small>
+                                            </td>
+                                            <td>
+                                                <strong class="text-success">R$ <?php echo number_format($pedido['total'], 2, ',', '.'); ?></strong>
+                                            </td>
                                             <td>
                                                 <small><?php echo date('d/m/Y', strtotime($pedido['data_pedido'])); ?></small><br>
                                                 <small class="text-muted"><?php echo date('H:i', strtotime($pedido['data_pedido'])); ?></small>
                                             </td>
                                             <td>
-                                                <span class="badge status-badge badge-<?php echo $pedido['status']; ?>">
-                                                    <?php echo ucfirst($pedido['status']); ?>
+                                                <span class="badge status-badge badge-<?php echo htmlspecialchars($pedido['status']); ?>">
+                                                    <?php echo htmlspecialchars(ucfirst($pedido['status'])); ?>
                                                 </span>
                                             </td>
                                             <td>
                                                 <div class="dropdown">
-                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                    <button class="btn btn-sm btn-outline-success dropdown-toggle" 
                                                             type="button" 
                                                             data-bs-toggle="dropdown" 
                                                             aria-expanded="false">
@@ -336,21 +422,22 @@ if (isset($estatisticas)) {
                                                     </button>
                                                     <ul class="dropdown-menu">
                                                         <li>
-                                                            <form method="POST" class="d-inline">
-                                                                <input type="hidden" name="pedido_id" value="<?php echo $pedido['id']; ?>">
-                                                                <div class="dropdown-item">
+                                                            <form method="POST" class="p-2" style="min-width: 250px;">
+                                                                <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+                                                                <input type="hidden" name="pedido_id" value="<?php echo intval($pedido['id']); ?>">
+                                                                <div class="mb-2">
                                                                     <label class="form-label small mb-1">Alterar Status:</label>
                                                                     <select name="novo_status" class="form-select form-select-sm">
                                                                         <?php foreach ($status_opcoes as $key => $label): ?>
-                                                                            <option value="<?php echo $key; ?>" 
+                                                                            <option value="<?php echo htmlspecialchars($key); ?>" 
                                                                                 <?php echo $key == $pedido['status'] ? 'selected' : ''; ?>>
-                                                                                <?php echo $label; ?>
+                                                                                <?php echo htmlspecialchars($label); ?>
                                                                             </option>
                                                                         <?php endforeach; ?>
                                                                     </select>
                                                                 </div>
-                                                                <div class="dropdown-item">
-                                                                    <button type="submit" name="atualizar_status" class="btn btn-primary btn-sm w-100">
+                                                                <div class="d-grid">
+                                                                    <button type="submit" name="atualizar_status" class="btn btn-success btn-sm">
                                                                         <i class="fas fa-save me-1"></i>Atualizar
                                                                     </button>
                                                                 </div>
@@ -358,8 +445,13 @@ if (isset($estatisticas)) {
                                                         </li>
                                                         <li><hr class="dropdown-divider"></li>
                                                         <li>
-                                                            <a class="dropdown-item" href="#" onclick="verDetalhes(<?php echo $pedido['id']; ?>)">
+                                                            <a class="dropdown-item" href="#" onclick="verDetalhes(<?php echo intval($pedido['id']); ?>)">
                                                                 <i class="fas fa-eye me-1"></i>Ver Detalhes
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" onclick="contatarCliente('<?php echo htmlspecialchars($pedido['usuario_email']); ?>', '<?php echo htmlspecialchars($pedido['usuario_celular']); ?>')">
+                                                                <i class="fas fa-phone me-1"></i>Contatar Cliente
                                                             </a>
                                                         </li>
                                                     </ul>
@@ -403,16 +495,59 @@ if (isset($estatisticas)) {
             });
         });
         
-        // Função para exportar relatório (simulação)
+        // Função para exportar relatório
         function exportarRelatorio() {
-            alert('Funcionalidade de exportação será implementada!');
-            // Aqui você pode implementar a lógica para exportar para CSV, PDF, etc.
+            // Criar dados para CSV
+            let csv = 'ID;Produto;Cliente;Quantidade;Total;Data;Status;Endereço\n';
+            
+            document.querySelectorAll('.pedido-row').forEach(row => {
+                if (row.style.display !== 'none') {
+                    const cells = row.querySelectorAll('td');
+                    const id = cells[0].textContent.trim();
+                    const produto = cells[1].querySelector('.fw-bold').textContent.trim();
+                    const cliente = cells[2].querySelector('.fw-bold').textContent.trim();
+                    const quantidade = cells[3].textContent.trim();
+                    const total = cells[4].textContent.trim();
+                    const data = cells[5].textContent.trim();
+                    const status = cells[6].textContent.trim();
+                    const endereco = cells[1].querySelectorAll('small')[1]?.textContent.trim() || '';
+                    
+                    csv += `${id};"${produto}";"${cliente}";"${quantidade}";"${total}";"${data}";"${status}";"${endereco}"\n`;
+                }
+            });
+            
+            // Criar blob e download
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `pedidos_${new Date().toISOString().slice(0,10)}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert('Relatório exportado com sucesso!');
         }
         
         // Função para ver detalhes do pedido
         function verDetalhes(pedidoId) {
-            alert(`Detalhes do pedido #${pedidoId} - Esta funcionalidade pode ser expandida para mostrar um modal com informações completas.`);
-            // Aqui você pode implementar um modal com detalhes completos do pedido
+            alert(`Detalhes do pedido #${pedidoId}\n\nEsta funcionalidade pode ser expandida para mostrar um modal com informações completas do pedido, histórico de status, etc.`);
+        }
+        
+        // Função para contatar cliente
+        function contatarCliente(email, telefone) {
+            const mensagem = `Contatar cliente:\n\nEmail: ${email}\nTelefone: ${telefone}\n\nClique em OK para copiar as informações.`;
+            
+            if (confirm(mensagem)) {
+                // Copiar informações para área de transferência
+                const texto = `Email: ${email}\nTelefone: ${telefone}`;
+                navigator.clipboard.writeText(texto)
+                    .then(() => alert('Informações copiadas para a área de transferência!'))
+                    .catch(() => alert('Não foi possível copiar as informações.'));
+            }
         }
         
         // Inicializar tooltips do Bootstrap
@@ -422,8 +557,8 @@ if (isset($estatisticas)) {
         });
     </script>
     <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
-  <script>
-    new window.VLibras.Widget('https://vlibras.gov.br/app');
-  </script>
+    <script>
+        new window.VLibras.Widget('https://vlibras.gov.br/app');
+    </script>
 </body>
 </html>

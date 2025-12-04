@@ -3,7 +3,7 @@ require_once 'includes/auth.php';
 require_once 'config/database.php';
 checkAuth();
 
-$usuario_id = $_SESSION['user_id'];
+$usuario_id = intval($_SESSION['user_id']);
 
 // Verifica se o usuário é produtor
 try {
@@ -13,15 +13,16 @@ try {
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($usuario['tipo_usuario'] !== 'Produtor') {
+        $_SESSION['error'] = 'Acesso restrito a produtores.';
         header("Location: perfil.php");
         exit();
     }
 } catch(PDOException $e) {
-    die("Erro ao verificar tipo de usuário: " . $e->getMessage());
+    die("Erro ao verificar tipo de usuário: " . htmlspecialchars($e->getMessage()));
 }
 
 // Configurações para upload de imagem
-$uploadDir = 'uploads/propostas/';
+$uploadDir = 'uploads/produtos/';
 $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 $maxFileSize = 5 * 1024 * 1024; // 5MB
 
@@ -32,25 +33,62 @@ if (!file_exists($uploadDir)) {
 
 $errors = [];
 $success = false;
+$dadosForm = [
+    'nome' => '',
+    'descricao' => '',
+    'tipo' => '',
+    'unidade_medida' => 'KG',
+    'quantidade_disponivel' => 1,
+    'preco_sugerido' => '',
+    'observacoes' => ''
+];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Verifica token CSRF
     if (!verifyCSRFToken($_POST['csrf_token'])) {
-        die('Token CSRF inválido.');
+        $_SESSION['error'] = 'Token CSRF inválido.';
+        header("Location: propor_produto.php");
+        exit();
     }
     
-    $nome = sanitizeInput($_POST['nome']);
-    $descricao = sanitizeInput($_POST['descricao']);
-    $tipo = sanitizeInput($_POST['tipo']);
-    $quantidade_disponivel = intval($_POST['quantidade_disponivel']);
-    $preco_sugerido = floatval(str_replace(',', '.', $_POST['preco_sugerido']));
-    $observacoes = sanitizeInput($_POST['observacoes'] ?? '');
+    // Coletar e sanitizar dados
+    $dadosForm['nome'] = sanitizeInput($_POST['nome'] ?? '');
+    $dadosForm['descricao'] = sanitizeInput($_POST['descricao'] ?? '');
+    $dadosForm['tipo'] = sanitizeInput($_POST['tipo'] ?? '');
+    $dadosForm['unidade_medida'] = sanitizeInput($_POST['unidade_medida'] ?? 'KG');
+    $dadosForm['quantidade_disponivel'] = intval($_POST['quantidade_disponivel'] ?? 1);
+    $dadosForm['observacoes'] = sanitizeInput($_POST['observacoes'] ?? '');
+    
+    // Processar preço
+    $precoInput = $_POST['preco_sugerido'] ?? '';
+    // Converte vírgula para ponto para armazenamento no banco
+    $precoInput = str_replace(',', '.', $precoInput);
+    $dadosForm['preco_sugerido'] = floatval($precoInput);
     
     // Validações
-    if (empty($nome)) $errors[] = "Nome do produto é obrigatório.";
-    if (empty($descricao)) $errors[] = "Descrição é obrigatória.";
-    if (empty($tipo)) $errors[] = "Tipo do produto é obrigatório.";
-    if ($quantidade_disponivel <= 0) $errors[] = "Quantidade deve ser maior que zero.";
-    if ($preco_sugerido <= 0) $errors[] = "Preço sugerido deve ser maior que zero.";
+    if (empty($dadosForm['nome']) || strlen($dadosForm['nome']) > 255) {
+        $errors[] = "Nome do produto é obrigatório e deve ter no máximo 255 caracteres.";
+    }
+    
+    if (empty($dadosForm['descricao'])) {
+        $errors[] = "Descrição é obrigatória.";
+    }
+    
+    if (empty($dadosForm['tipo'])) {
+        $errors[] = "Tipo do produto é obrigatório.";
+    }
+    
+    if (!in_array($dadosForm['unidade_medida'], ['KG', 'UN', 'Dúzia', 'Penca', 'Outros'])) {
+        $errors[] = "Unidade de medida inválida.";
+    }
+    
+    if ($dadosForm['quantidade_disponivel'] <= 0) {
+        $errors[] = "Quantidade deve ser maior que zero.";
+    }
+    
+    if ($dadosForm['preco_sugerido'] <= 0) {
+        $errors[] = "Preço sugerido deve ser maior que zero.";
+    }
     
     // Processar upload da imagem
     $imagemNome = '';
@@ -62,9 +100,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = "Erro no upload da imagem: " . getUploadError($imagem['error']);
         } else {
             // Verificar tipo do arquivo
-            $fileType = mime_content_type($imagem['tmp_name']);
-            if (!in_array($fileType, $allowedTypes)) {
+            $fileExtension = strtolower(pathinfo($imagem['name'], PATHINFO_EXTENSION));
+            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+            
+            if (!in_array($fileExtension, $allowedExtensions)) {
                 $errors[] = "Tipo de arquivo não permitido. Use apenas JPG, PNG, GIF ou WebP.";
+            }
+            
+            // Verificar MIME type
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mimeType = finfo_file($finfo, $imagem['tmp_name']);
+            finfo_close($finfo);
+            
+            if (!in_array($mimeType, $allowedTypes)) {
+                $errors[] = "Tipo MIME do arquivo não é permitido.";
             }
             
             // Verificar tamanho do arquivo
@@ -72,10 +121,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = "Arquivo muito grande. Tamanho máximo permitido: 5MB.";
             }
             
+            // Validar se é realmente uma imagem
+            $imageInfo = getimagesize($imagem['tmp_name']);
+            if (!$imageInfo) {
+                $errors[] = "O arquivo enviado não é uma imagem válida.";
+            }
+            
             if (empty($errors)) {
                 // Gerar nome único para o arquivo
-                $fileExtension = pathinfo($imagem['name'], PATHINFO_EXTENSION);
-                $imagemNome = uniqid('proposta_') . '_' . time() . '.' . $fileExtension;
+                $imagemNome = uniqid('produto_', true) . '_' . time() . '.' . $fileExtension;
                 $uploadPath = $uploadDir . $imagemNome;
                 
                 // Mover arquivo para o diretório de uploads
@@ -93,20 +147,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conn = getDBConnection();
             $stmt = $conn->prepare("
                 INSERT INTO produtos_propostos 
-                (produtor_id, nome, descricao, tipo, quantidade_disponivel, imagem_url, preco_sugerido, observacoes) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (produtor_id, nome, descricao, tipo, unidade_medida, quantidade_disponivel, imagem_url, preco_sugerido, observacoes) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             
             $stmt->execute([
                 $usuario_id,
-                $nome,
-                $descricao,
-                $tipo,
-                $quantidade_disponivel,
+                $dadosForm['nome'],
+                $dadosForm['descricao'],
+                $dadosForm['tipo'],
+                $dadosForm['unidade_medida'],
+                $dadosForm['quantidade_disponivel'],
                 $imagemNome,
-                $preco_sugerido,
-                $observacoes
+                $dadosForm['preco_sugerido'],
+                $dadosForm['observacoes']
             ]);
+            
+            // Log da ação (simplificado - removida a função não existente)
+            // logSecurity($usuario_id, 'proposta_enviada', "Proposta '{$dadosForm['nome']}' enviada");
             
             $success = true;
             
@@ -115,7 +173,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!empty($imagemNome) && file_exists($uploadDir . $imagemNome)) {
                 unlink($uploadDir . $imagemNome);
             }
-            $errors[] = "Erro ao propor produto: " . $e->getMessage();
+            $errors[] = "Erro ao propor produto: " . htmlspecialchars($e->getMessage());
+            // Log simplificado
+            error_log("Erro ao propor produto - Usuário: $usuario_id - Erro: " . $e->getMessage());
         }
     }
 }
@@ -256,15 +316,26 @@ function getUploadError($errorCode) {
             padding: 20px;
             margin-bottom: 20px;
         }
+        
+        /* Garantir que o campo de preço seja visível */
+        #preco_sugerido {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            width: 100% !important;
+        }
+        
+        .input-group .form-control {
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
-
-<!-- VLibras -->
-  <div vw class="enabled">
-    <div vw-access-button class="active"></div>
-    <div vw-plugin-wrapper></div>
-  </div>
+    <!-- VLibras -->
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper></div>
+    </div>
 
     <?php include 'includes/_menu.php'; ?>
 
@@ -319,7 +390,7 @@ function getUploadError($errorCode) {
                             <h5><i class="bi bi-exclamation-triangle"></i> Erros no formulário:</h5>
                             <ul class="mb-0">
                                 <?php foreach ($errors as $error): ?>
-                                    <li><?php echo $error; ?></li>
+                                    <li><?php echo htmlspecialchars($error); ?></li>
                                 <?php endforeach; ?>
                             </ul>
                         </div>
@@ -361,54 +432,76 @@ function getUploadError($errorCode) {
                             <i class="bi bi-clipboard2-data"></i> Informações do Produto
                         </div>
                         <div class="card-body">
-                            <form method="POST" enctype="multipart/form-data">
+                            <form method="POST" enctype="multipart/form-data" id="formProposta">
                                 <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
                                 
                                 <div class="row g-3">
                                     <div class="col-md-12">
-                                        <label for="nome" class="form-label">Nome do Produto</label>
+                                        <label for="nome" class="form-label">Nome do Produto *</label>
                                         <input type="text" class="form-control" id="nome" name="nome" required 
-                                               value="<?php echo isset($_POST['nome']) ? htmlspecialchars($_POST['nome']) : ''; ?>"
+                                               value="<?php echo htmlspecialchars($dadosForm['nome']); ?>"
+                                               maxlength="255"
                                                placeholder="Ex: Tomate Cereja, Alface Crespa, etc.">
                                     </div>
                                     
                                     <div class="col-md-12">
-                                        <label for="descricao" class="form-label">Descrição Detalhada</label>
+                                        <label for="descricao" class="form-label">Descrição Detalhada *</label>
                                         <textarea class="form-control" id="descricao" name="descricao" rows="4" required 
-                                                  placeholder="Descreva o produto, variedade, características, método de cultivo, etc."><?php echo isset($_POST['descricao']) ? htmlspecialchars($_POST['descricao']) : ''; ?></textarea>
+                                                  placeholder="Descreva o produto, variedade, características, método de cultivo, etc."><?php echo htmlspecialchars($dadosForm['descricao']); ?></textarea>
                                     </div>
                                     
                                     <div class="col-md-6">
-                                        <label for="tipo" class="form-label">Tipo do Produto</label>
+                                        <label for="tipo" class="form-label">Tipo do Produto *</label>
                                         <select class="form-select" id="tipo" name="tipo" required>
                                             <option value="">Selecione o tipo...</option>
-                                            <option value="hortaliça" <?php echo (isset($_POST['tipo']) && $_POST['tipo'] == 'hortaliça') ? 'selected' : ''; ?>>Hortaliça</option>
-                                            <option value="legume" <?php echo (isset($_POST['tipo']) && $_POST['tipo'] == 'legume') ? 'selected' : ''; ?>>Legume</option>
-                                            <option value="fruta" <?php echo (isset($_POST['tipo']) && $_POST['tipo'] == 'fruta') ? 'selected' : ''; ?>>Fruta</option>
-                                            <option value="tubérculo" <?php echo (isset($_POST['tipo']) && $_POST['tipo'] == 'tubérculo') ? 'selected' : ''; ?>>Tubérculo</option>
-                                            <option value="vagem" <?php echo (isset($_POST['tipo']) && $_POST['tipo'] == 'vagem') ? 'selected' : ''; ?>>Vagem</option>
-                                            <option value="outros" <?php echo (isset($_POST['tipo']) && $_POST['tipo'] == 'outros') ? 'selected' : ''; ?>>Outros</option>
+                                            <option value="hortaliça" <?php echo $dadosForm['tipo'] === 'hortaliça' ? 'selected' : ''; ?>>Hortaliça</option>
+                                            <option value="legume" <?php echo $dadosForm['tipo'] === 'legume' ? 'selected' : ''; ?>>Legume</option>
+                                            <option value="fruta" <?php echo $dadosForm['tipo'] === 'fruta' ? 'selected' : ''; ?>>Fruta</option>
+                                            <option value="tubérculo" <?php echo $dadosForm['tipo'] === 'tubérculo' ? 'selected' : ''; ?>>Tubérculo</option>
+                                            <option value="vagem" <?php echo $dadosForm['tipo'] === 'vagem' ? 'selected' : ''; ?>>Vagem</option>
+                                            <option value="outros" <?php echo $dadosForm['tipo'] === 'outros' ? 'selected' : ''; ?>>Outros</option>
                                         </select>
                                     </div>
                                     
                                     <div class="col-md-6">
-                                        <label for="quantidade_disponivel" class="form-label">Quantidade Disponível (unidades)</label>
-                                        <input type="number" class="form-control" id="quantidade_disponivel" name="quantidade_disponivel" 
-                                               min="1" required value="<?php echo isset($_POST['quantidade_disponivel']) ? htmlspecialchars($_POST['quantidade_disponivel']) : '1'; ?>">
+                                        <label for="unidade_medida" class="form-label">Unidade de Medida *</label>
+                                        <select class="form-select" id="unidade_medida" name="unidade_medida" required>
+                                            <option value="">Selecione...</option>
+                                            <option value="KG" <?php echo $dadosForm['unidade_medida'] === 'KG' ? 'selected' : ''; ?>>Quilograma (KG)</option>
+                                            <option value="UN" <?php echo $dadosForm['unidade_medida'] === 'UN' ? 'selected' : ''; ?>>Unidade (UN)</option>
+                                            <option value="Dúzia" <?php echo $dadosForm['unidade_medida'] === 'Dúzia' ? 'selected' : ''; ?>>Dúzia</option>
+                                            <option value="Penca" <?php echo $dadosForm['unidade_medida'] === 'Penca' ? 'selected' : ''; ?>>Penca</option>
+                                            <option value="Outros" <?php echo $dadosForm['unidade_medida'] === 'Outros' ? 'selected' : ''; ?>>Outros</option>
+                                        </select>
                                     </div>
                                     
                                     <div class="col-md-6">
-                                        <label for="preco_sugerido" class="form-label">Preço Sugerido (R$)</label>
-                                        <input type="text" class="form-control" id="preco_sugerido" name="preco_sugerido" 
-                                               required value="<?php echo isset($_POST['preco_sugerido']) ? htmlspecialchars($_POST['preco_sugerido']) : ''; ?>"
-                                               placeholder="0,00">
-                                        <div class="form-text">Preço sugerido por unidade</div>
+                                        <label for="quantidade_disponivel" class="form-label">Quantidade Disponível *</label>
+                                        <input type="number" class="form-control" id="quantidade_disponivel" name="quantidade_disponivel" 
+                                               min="1" required value="<?php echo htmlspecialchars($dadosForm['quantidade_disponivel']); ?>">
+                                        <div class="form-text" id="quantidade-texto">Quantidade disponível em <?php echo htmlspecialchars($dadosForm['unidade_medida']); ?></div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="preco_sugerido" class="form-label">Preço Sugerido (R$) *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">R$</span>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="preco_sugerido" 
+                                                   name="preco_sugerido" 
+                                                   required 
+                                                   value="<?php echo isset($dadosForm['preco_sugerido']) && $dadosForm['preco_sugerido'] > 0 ? 
+                                                           htmlspecialchars(number_format($dadosForm['preco_sugerido'], 2, ',', '.')) : ''; ?>"
+                                                   placeholder="0,00">
+                                        </div>
+                                        <div class="form-text" id="preco-texto">Preço sugerido por <?php echo htmlspecialchars($dadosForm['unidade_medida']); ?></div>
                                     </div>
                                     
                                     <div class="col-md-12">
                                         <label for="observacoes" class="form-label">Observações Adicionais</label>
                                         <textarea class="form-control" id="observacoes" name="observacoes" rows="3"
-                                                  placeholder="Informações adicionais que possam ajudar na análise do produto..."><?php echo isset($_POST['observacoes']) ? htmlspecialchars($_POST['observacoes']) : ''; ?></textarea>
+                                                  placeholder="Informações adicionais que possam ajudar na análise do produto..."><?php echo htmlspecialchars($dadosForm['observacoes']); ?></textarea>
                                     </div>
                                 </div>
                         </div>
@@ -421,15 +514,15 @@ function getUploadError($errorCode) {
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
-                                <label class="form-label">Foto do Produto</label>
+                                <label class="form-label">Foto do Produto *</label>
                                 <div class="upload-area" id="uploadArea">
                                     <i class="bi bi-cloud-arrow-up fs-1 text-muted"></i>
                                     <p class="mt-2 mb-1">Clique para selecionar ou arraste uma imagem do produto</p>
                                     <p class="text-muted small">Formatos: JPG, PNG, GIF, WebP (Máx. 5MB)</p>
                                     <input type="file" class="d-none" id="imagem" name="imagem" accept="image/*" required>
                                 </div>
-                                <img id="preview" class="preview-imagem d-none" alt="Preview da imagem">
-                                <div class="form-text">A imagem deve mostrar claramente o produto proposto.</div>
+                                <img id="preview" class="preview-imagem d-none mt-3" alt="Preview da imagem">
+                                <div class="form-text mt-2">A imagem deve mostrar claramente o produto proposto.</div>
                             </div>
                         </div>
                     </div>
@@ -501,15 +594,31 @@ function getUploadError($errorCode) {
             const fileInput = document.getElementById('imagem');
             const preview = document.getElementById('preview');
             const precoInput = document.getElementById('preco_sugerido');
+            const form = document.getElementById('formProposta');
+            const unidadeSelect = document.getElementById('unidade_medida');
+            const quantidadeTexto = document.getElementById('quantidade-texto');
+            const precoTexto = document.getElementById('preco-texto');
             
-            // Formatação do preço
-            precoInput.addEventListener('input', function(e) {
-                let value = e.target.value.replace(/\D/g, '');
-                value = (value / 100).toFixed(2);
-                value = value.replace('.', ',');
-                value = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-                e.target.value = value;
-            });
+            // Função para atualizar os textos com base na unidade selecionada
+            function atualizarTextosUnidade() {
+                const unidade = unidadeSelect.value || 'unidade';
+                
+                if (quantidadeTexto) {
+                    quantidadeTexto.textContent = `Quantidade disponível em ${unidade}`;
+                }
+                
+                if (precoTexto) {
+                    precoTexto.textContent = `Preço sugerido por ${unidade}`;
+                }
+                
+                // Atualizar placeholder do preço
+                if (precoInput) {
+                    precoInput.placeholder = `0,00 por ${unidade}`;
+                }
+            }
+            
+            // Atualizar texto da unidade de medida quando mudar
+            unidadeSelect.addEventListener('change', atualizarTextosUnidade);
             
             // Upload de imagem
             uploadArea.addEventListener('click', function() {
@@ -523,6 +632,16 @@ function getUploadError($errorCode) {
                     // Verificar tamanho do arquivo (5MB)
                     if (file.size > 5 * 1024 * 1024) {
                         alert('Arquivo muito grande. Tamanho máximo: 5MB.');
+                        this.value = '';
+                        return;
+                    }
+                    
+                    // Verificar extensão
+                    const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                    const fileExtension = file.name.split('.').pop().toLowerCase();
+                    
+                    if (!allowedExtensions.includes(fileExtension)) {
+                        alert('Tipo de arquivo não permitido. Use apenas JPG, PNG, GIF ou WebP.');
                         this.value = '';
                         return;
                     }
@@ -545,48 +664,61 @@ function getUploadError($errorCode) {
                 uploadArea.style.display = 'block';
             });
             
-            // Drag and drop
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                uploadArea.addEventListener(eventName, preventDefaults, false);
-            });
-            
-            function preventDefaults(e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-            
-            ['dragenter', 'dragover'].forEach(eventName => {
-                uploadArea.addEventListener(eventName, highlight, false);
-            });
-            
-            ['dragleave', 'drop'].forEach(eventName => {
-                uploadArea.addEventListener(eventName, unhighlight, false);
-            });
-            
-            function highlight() {
-                uploadArea.classList.add('dragover');
-            }
-            
-            function unhighlight() {
-                uploadArea.classList.remove('dragover');
-            }
-            
-            uploadArea.addEventListener('drop', handleDrop, false);
-            
-            function handleDrop(e) {
-                const dt = e.dataTransfer;
-                const files = dt.files;
+            // Validação simples do preço (permite números, vírgula e ponto)
+            precoInput.addEventListener('keypress', function(e) {
+                const char = String.fromCharCode(e.which);
                 
-                if (files.length > 0) {
-                    fileInput.files = files;
-                    fileInput.dispatchEvent(new Event('change'));
+                // Permite números
+                if (/[0-9]/.test(char)) {
+                    return true;
                 }
-            }
+                
+                // Permite vírgula (apenas uma)
+                if (char === ',' && this.value.indexOf(',') === -1) {
+                    return true;
+                }
+                
+                // Permite backspace, delete, tab, etc.
+                if (e.which === 8 || e.which === 9 || e.which === 0) {
+                    return true;
+                }
+                
+                e.preventDefault();
+                return false;
+            });
+            
+            // Validação do formulário
+            form.addEventListener('submit', function(e) {
+                let valid = true;
+                const quantidadeInput = document.getElementById('quantidade_disponivel');
+                
+                // Validar quantidade
+                if (parseInt(quantidadeInput.value) < 1) {
+                    alert('A quantidade deve ser maior que zero.');
+                    quantidadeInput.focus();
+                    valid = false;
+                }
+                
+                // Validar preço
+                const precoValue = precoInput.value.replace(',', '.');
+                if (isNaN(parseFloat(precoValue)) || parseFloat(precoValue) <= 0) {
+                    alert('O preço sugerido deve ser maior que zero e em formato válido (ex: 10,50).');
+                    precoInput.focus();
+                    valid = false;
+                }
+                
+                if (!valid) {
+                    e.preventDefault();
+                }
+            });
+            
+            // Inicializar textos
+            atualizarTextosUnidade();
         });
     </script>
     <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
-  <script>
-    new window.VLibras.Widget('https://vlibras.gov.br/app');
-  </script>
+    <script>
+        new window.VLibras.Widget('https://vlibras.gov.br/app');
+    </script>
 </body>
 </html>

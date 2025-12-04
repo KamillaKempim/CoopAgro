@@ -4,7 +4,17 @@ require_once 'config/database.php';
 checkAuth();
 
 // Verificar se o usuário tem permissão de administrador
+if ($_SESSION['tipo_usuario'] !== 'Administrador') {
+    header('Location: index.php?error=acesso_negado');
+    exit();
+}
+
 $usuario_id = $_SESSION['user_id'];
+
+// Inicializar variáveis
+$propostas = [];
+$error = '';
+$success = '';
 
 // Buscar propostas pendentes
 try {
@@ -16,129 +26,175 @@ try {
             pp.*,
             u.nome as produtor_nome,
             u.email as produtor_email,
-            u.celular as produtor_celular,
-            DATE_FORMAT(pp.data_criacao, '%d/%m/%Y às %H:%i') as data_criacao_formatada
+            u.celular as produtor_celular
         FROM produtos_propostos pp 
         INNER JOIN usuarios u ON pp.produtor_id = u.id 
         WHERE pp.status = 'pendente'
         ORDER BY pp.data_criacao ASC
     ");
+    
     $stmtPropostas->execute();
     $propostas = $stmtPropostas->fetchAll(PDO::FETCH_ASSOC);
     
     // Processar ações de aprovação/rejeição
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!verifyCSRFToken($_POST['csrf_token'])) {
-            die('Token CSRF inválido.');
-        }
-        
-        $proposta_id = $_POST['proposta_id'];
-        $acao = $_POST['acao'];
-        $preco_final = $_POST['preco_final'] ?? null;
-        $observacoes_admin = $_POST['observacoes_admin'] ?? '';
-        
-        if ($acao === 'aprovar' && $preco_final) {
-            // Buscar dados da proposta
-            $stmtProposta = $conn->prepare("SELECT * FROM produtos_propostos WHERE id = ?");
-            $stmtProposta->execute([$proposta_id]);
-            $proposta = $stmtProposta->fetch(PDO::FETCH_ASSOC);
+            $error = 'Token CSRF inválido.';
+        } else {
+            $proposta_id = filter_input(INPUT_POST, 'proposta_id', FILTER_VALIDATE_INT);
+            $acao = filter_input(INPUT_POST, 'acao', FILTER_SANITIZE_SPECIAL_CHARS);
+            $preco_final = filter_input(INPUT_POST, 'preco_final', FILTER_VALIDATE_FLOAT);
+            $observacoes_admin = filter_input(INPUT_POST, 'observacoes_admin', FILTER_SANITIZE_SPECIAL_CHARS);
             
-            if ($proposta) {
-                // Mover a imagem do diretório de propostas para produtos
-                $novaImagemUrl = '';
-                if (!empty($proposta['imagem_url'])) {
-                    $origem = 'uploads/propostas/' . $proposta['imagem_url'];
+            if (!$proposta_id || !$acao) {
+                $error = 'Parâmetros inválidos.';
+            } elseif ($acao === 'aprovar') {
+                if (!$preco_final || $preco_final <= 0) {
+                    $error = 'Preço final inválido. Deve ser um valor maior que zero.';
+                } else {
+                    // Buscar dados da proposta
+                    $stmtProposta = $conn->prepare("SELECT * FROM produtos_propostos WHERE id = ? AND status = 'pendente'");
+                    $stmtProposta->execute([$proposta_id]);
+                    $proposta = $stmtProposta->fetch(PDO::FETCH_ASSOC);
                     
-                    // Gerar novo nome para a imagem (trocar prefixo "proposta" por "produto")
-                    $nomeArquivo = $proposta['imagem_url'];
-                    $novoNomeArquivo = preg_replace('/^proposta_/', 'produto_', $nomeArquivo);
-                    
-                    $destino = 'uploads/produtos/' . $novoNomeArquivo;
-                    
-                    if (file_exists($origem)) {
-                        // Copiar a imagem para o diretório de produtos com novo nome
-                        if (copy($origem, $destino)) {
-                            $novaImagemUrl = $novoNomeArquivo;
-                            
-                            // Excluir a imagem original do diretório de propostas
-                            if (file_exists($origem)) {
-                                unlink($origem);
-                            }
-                        } else {
-                            // Se não conseguir copiar, usar a imagem original
-                            $novaImagemUrl = $proposta['imagem_url'];
-                        }
+                    if (!$proposta) {
+                        $error = 'Proposta não encontrada ou já processada.';
                     } else {
-                        // Se a imagem não existir, usar placeholder
+                        // Mover a imagem do diretório de propostas para produtos
                         $novaImagemUrl = '';
+                        if (!empty($proposta['imagem_url']) && $proposta['imagem_url'] !== 'sem-imagem.jpg') {
+                            $origem = 'uploads/propostas/' . $proposta['imagem_url'];
+                            
+                            // Validar se é um arquivo de imagem
+                            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                            $fileExtension = strtolower(pathinfo($proposta['imagem_url'], PATHINFO_EXTENSION));
+                            
+                            if (in_array($fileExtension, $allowedExtensions) && file_exists($origem)) {
+                                // Gerar novo nome único para evitar conflitos
+                                $novoNomeArquivo = 'produto_' . uniqid() . '_' . time() . '.' . $fileExtension;
+                                $destino = 'uploads/produtos/' . $novoNomeArquivo;
+                                
+                                // Copiar a imagem para o diretório de produtos
+                                if (copy($origem, $destino)) {
+                                    $novaImagemUrl = $novoNomeArquivo;
+                                    
+                                    // Excluir a imagem original do diretório de propostas
+                                    unlink($origem);
+                                } else {
+                                    $novaImagemUrl = $proposta['imagem_url'];
+                                }
+                            }
+                        }
+                        
+                        // Inserir na tabela de produtos
+                        $stmtInserir = $conn->prepare("
+                            INSERT INTO produtos 
+                            (nome, descricao, tipo, unidade_medida, preco, preco_custo, quantidade_estoque, imagem_url, disponivel, aprovado_por, data_aprovacao, data_criacao) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW(), NOW())
+                        ");
+                        
+                        $stmtInserir->execute([
+                            htmlspecialchars($proposta['nome']),
+                            htmlspecialchars($proposta['descricao']),
+                            $proposta['tipo'],
+                            $proposta['unidade_medida'],
+                            $preco_final,
+                            $proposta['preco_sugerido'] ?? 0,
+                            $proposta['quantidade_disponivel'] ?? 0,
+                            $novaImagemUrl,
+                            $usuario_id
+                        ]);
+                        
+                        // Obter o ID do produto recém-criado
+                        $produto_id = $conn->lastInsertId();
+                        
+                        // Atualizar status da proposta
+                        $stmtAtualizar = $conn->prepare("
+                            UPDATE produtos_propostos 
+                            SET status = 'aprovado', 
+                                data_avaliacao = NOW(),
+                                avaliado_por = ?,
+                                observacoes = ?
+                            WHERE id = ?
+                        ");
+                        $stmtAtualizar->execute([$usuario_id, $observacoes_admin, $proposta_id]);
+                        
+                        $_SESSION['success'] = "Produto aprovado e publicado com sucesso!";
+                        header("Location: validacao_produtos.php");
+                        exit();
                     }
                 }
+            } elseif ($acao === 'rejeitar') {
+                // Buscar dados da proposta
+                $stmtProposta = $conn->prepare("SELECT * FROM produtos_propostos WHERE id = ? AND status = 'pendente'");
+                $stmtProposta->execute([$proposta_id]);
+                $proposta = $stmtProposta->fetch(PDO::FETCH_ASSOC);
                 
-                // Inserir na tabela de produtos
-                $stmtInserir = $conn->prepare("
-                    INSERT INTO produtos 
-                    (nome, descricao, tipo, preco, preco_custo, quantidade_estoque, imagem_url, disponivel) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-                ");
-                
-                $stmtInserir->execute([
-                    $proposta['nome'],
-                    $proposta['descricao'],
-                    $proposta['tipo'],
-                    $preco_final,
-                    $proposta['preco_sugerido'], // preco_custo = preco_sugerido
-                    $proposta['quantidade_disponivel'],
-                    $novaImagemUrl
-                ]);
-                
-                // Atualizar status da proposta
-                $stmtAtualizar = $conn->prepare("
-                    UPDATE produtos_propostos 
-                    SET status = 'aprovado', 
-                        data_avaliacao = NOW(),
-                        observacoes = ?
-                    WHERE id = ?
-                ");
-                $stmtAtualizar->execute([$observacoes_admin, $proposta_id]);
-                
-                $success = "Produto aprovado e publicado com sucesso!";
-            }
-            
-        } elseif ($acao === 'rejeitar') {
-            // Buscar dados da proposta para excluir a imagem
-            $stmtProposta = $conn->prepare("SELECT * FROM produtos_propostos WHERE id = ?");
-            $stmtProposta->execute([$proposta_id]);
-            $proposta = $stmtProposta->fetch(PDO::FETCH_ASSOC);
-            
-            if ($proposta && !empty($proposta['imagem_url'])) {
-                $caminhoImagem = 'uploads/propostas/' . $proposta['imagem_url'];
-                
-                // Excluir a imagem da proposta rejeitada
-                if (file_exists($caminhoImagem)) {
-                    unlink($caminhoImagem);
+                if (!$proposta) {
+                    $error = 'Proposta não encontrada ou já processada.';
+                } else {
+                    // Verificar se tem imagem para excluir
+                    if (!empty($proposta['imagem_url']) && $proposta['imagem_url'] !== 'sem-imagem.jpg') {
+                        $caminhoImagem = 'uploads/propostas/' . $proposta['imagem_url'];
+                        
+                        // Validar se é um arquivo de imagem antes de excluir
+                        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                        $fileExtension = strtolower(pathinfo($proposta['imagem_url'], PATHINFO_EXTENSION));
+                        
+                        if (in_array($fileExtension, $allowedExtensions) && file_exists($caminhoImagem)) {
+                            unlink($caminhoImagem);
+                        }
+                    }
+                    
+                    // Atualizar status para rejeitado
+                    $stmtRejeitar = $conn->prepare("
+                        UPDATE produtos_propostos 
+                        SET status = 'rejeitado', 
+                            data_avaliacao = NOW(),
+                            avaliado_por = ?,
+                            observacoes = ?
+                        WHERE id = ?
+                    ");
+                    $stmtRejeitar->execute([$usuario_id, $observacoes_admin, $proposta_id]);
+                    
+                    $_SESSION['success'] = "Proposta rejeitada com sucesso!";
+                    header("Location: validacao_produtos.php");
+                    exit();
                 }
+            } else {
+                $error = 'Ação inválida.';
             }
-            
-            // Atualizar status para rejeitado
-            $stmtRejeitar = $conn->prepare("
-                UPDATE produtos_propostos 
-                SET status = 'rejeitado', 
-                    data_avaliacao = NOW(),
-                    observacoes = ?
-                WHERE id = ?
-            ");
-            $stmtRejeitar->execute([$observacoes_admin, $proposta_id]);
-            
-            $success = "Proposta rejeitada com sucesso!";
         }
-        
-        // Recarregar a página para atualizar a lista
-        header("Location: validacao_produtos.php");
-        exit();
+    }
+    
+    // Buscar estatísticas para o dashboard
+    try {
+        $stmtStats = $conn->prepare("
+            SELECT 
+                COUNT(CASE WHEN status = 'pendente' THEN 1 END) as total_pendentes,
+                COUNT(CASE WHEN DATE(data_avaliacao) = CURDATE() AND status = 'aprovado' THEN 1 END) as aprovados_hoje,
+                COUNT(CASE WHEN DATE(data_avaliacao) = CURDATE() AND status = 'rejeitado' THEN 1 END) as rejeitados_hoje
+            FROM produtos_propostos 
+            WHERE status IN ('pendente', 'aprovado', 'rejeitado')
+        ");
+        $stmtStats->execute();
+        $stats = $stmtStats->fetch(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $stats = ['total_pendentes' => 0, 'aprovados_hoje' => 0, 'rejeitados_hoje' => 0];
     }
     
 } catch(PDOException $e) {
-    $error = "Erro ao carregar propostas: " . $e->getMessage();
+    error_log("Erro PDO ao carregar propostas: " . $e->getMessage());
+    $error = "Erro no banco de dados: " . $e->getMessage();
+} catch(Exception $e) {
+    error_log("Erro geral ao carregar propostas: " . $e->getMessage());
+    $error = $e->getMessage();
+}
+
+// Verificar se há mensagem de sucesso na sessão
+if (isset($_SESSION['success'])) {
+    $success = $_SESSION['success'];
+    unset($_SESSION['success']);
 }
 ?>
 
@@ -213,12 +269,14 @@ try {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             border-radius: 10px;
             padding: 15px;
+            margin-top: 15px;
         }
         
         .price-comparison {
             background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
             border-radius: 10px;
             padding: 15px;
+            margin-top: 15px;
         }
         
         .modal-price-input {
@@ -238,6 +296,52 @@ try {
         .empty-state {
             text-align: center;
             padding: 60px 20px;
+        }
+        
+        .badge-status-pendente {
+            background-color: #ffc107;
+            color: #000;
+        }
+        
+        .margin-beneficio {
+            font-size: 0.85rem;
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .image-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+        }
+        
+        .image-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+        
+        .admin-badge {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+        }
+        
+        .unidade-badge {
+            background-color: #e3f2fd;
+            color: #1565c0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
         }
     </style>
 </head>
@@ -261,21 +365,26 @@ try {
                     </h1>
                     <p class="lead mb-0">Analise e aprove as propostas de produtos dos produtores</p>
                 </div>
-                <div class="col-md-4 text-center">
-                    <i class="bi bi-shield-check" style="font-size: 4rem; opacity: 0.8;"></i>
+                <div class="col-md-4 text-end">
+                    <span class="admin-badge">
+                        <i class="bi bi-shield-check"></i> Administrador
+                    </span>
                 </div>
             </div>
         </div>
     </section>
 
     <div class="container">
-        <?php if (isset($error)): ?>
-            <div class="alert alert-danger"><?php echo $error; ?></div>
+        <?php if (!empty($error)): ?>
+            <div class="alert alert-danger alert-dismissible fade show">
+                <i class="bi bi-exclamation-triangle"></i> <?php echo htmlspecialchars($error); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
         <?php endif; ?>
 
-        <?php if (isset($success)): ?>
+        <?php if (!empty($success)): ?>
             <div class="alert alert-success alert-dismissible fade show">
-                <?php echo $success; ?>
+                <i class="bi bi-check-circle"></i> <?php echo htmlspecialchars($success); ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
@@ -295,11 +404,11 @@ try {
                                 <p class="text-muted mb-0">Aguardando Análise</p>
                             </div>
                             <div class="col-md-3">
-                                <h4 class="text-warning">0</h4>
+                                <h4 class="text-warning"><?php echo $stats['aprovados_hoje'] ?? 0; ?></h4>
                                 <p class="text-muted mb-0">Aprovados Hoje</p>
                             </div>
                             <div class="col-md-3">
-                                <h4 class="text-danger">0</h4>
+                                <h4 class="text-danger"><?php echo $stats['rejeitados_hoje'] ?? 0; ?></h4>
                                 <p class="text-muted mb-0">Rejeitados Hoje</p>
                             </div>
                         </div>
@@ -315,7 +424,10 @@ try {
                 <div class="empty-state">
                     <i class="bi bi-clipboard2-check display-1 text-muted"></i>
                     <h3 class="text-muted mt-3">Nenhuma proposta pendente</h3>
-                    <p class="text-muted">Todas as propostas foram analisadas.</p>
+                    <p class="text-muted">Todas as propostas foram analisadas ou não há novas propostas.</p>
+                    <a href="dashboard.php" class="btn btn-success mt-3">
+                        <i class="bi bi-arrow-left"></i> Voltar ao Dashboard
+                    </a>
                 </div>
             </div>
         <?php else: ?>
@@ -325,60 +437,91 @@ try {
                         <div class="row">
                             <!-- Imagem e Informações Básicas -->
                             <div class="col-md-4 mb-3">
-                                <?php 
-                                $imagemSrc = !empty($proposta['imagem_url']) ? 
-                                    'uploads/propostas/' . htmlspecialchars($proposta['imagem_url']) : 
-                                    'https://via.placeholder.com/300x200/CCCCCC/969696?text=Sem+Imagem';
-                                ?>
-                                <img src="<?php echo $imagemSrc; ?>" 
-                                     alt="<?php echo htmlspecialchars($proposta['nome']); ?>"
-                                     class="proposta-image mb-3"
-                                     onerror="this.src='https://via.placeholder.com/300x200/CCCCCC/969696?text=Imagem+Não+Encontrada'">
+                                <div class="image-container">
+                                    <?php 
+                                    $imagemSrc = !empty($proposta['imagem_url']) && $proposta['imagem_url'] !== 'sem-imagem.jpg' 
+                                        ? 'uploads/propostas/' . htmlspecialchars($proposta['imagem_url']) 
+                                        : 'https://via.placeholder.com/300x200/CCCCCC/969696?text=Sem+Imagem';
+                                    ?>
+                                    <img src="<?php echo $imagemSrc; ?>" 
+                                         alt="<?php echo htmlspecialchars($proposta['nome']); ?>"
+                                         class="proposta-image"
+                                         onerror="this.src='https://via.placeholder.com/300x200/CCCCCC/969696?text=Imagem+Não+Encontrada'">
+                                    <div class="image-overlay">
+                                        Proposta #<?php echo $proposta['id']; ?>
+                                    </div>
+                                </div>
                                 
                                 <div class="produtor-info">
-                                    <h6 class="fw-bold mb-2">Informações do Produtor</h6>
-                                    <p class="mb-1"><strong>Nome:</strong> <?php echo htmlspecialchars($proposta['produtor_nome']); ?></p>
-                                    <p class="mb-1"><strong>Email:</strong> <?php echo htmlspecialchars($proposta['produtor_email']); ?></p>
-                                    <p class="mb-0"><strong>Celular:</strong> <?php echo htmlspecialchars($proposta['produtor_celular']); ?></p>
+                                    <h6 class="fw-bold mb-2">
+                                        <i class="bi bi-person-circle"></i> Informações do Produtor
+                                    </h6>
+                                    <p class="mb-1">
+                                        <strong>Nome:</strong> <?php echo htmlspecialchars($proposta['produtor_nome']); ?>
+                                    </p>
+                                    <p class="mb-1">
+                                        <strong>Email:</strong> 
+                                        <a href="mailto:<?php echo htmlspecialchars($proposta['produtor_email']); ?>" class="text-decoration-none">
+                                            <?php echo htmlspecialchars($proposta['produtor_email']); ?>
+                                        </a>
+                                    </p>
+                                    <p class="mb-0">
+                                        <strong>Celular:</strong> 
+                                        <a href="https://wa.me/55<?php echo preg_replace('/[^0-9]/', '', $proposta['produtor_celular']); ?>" 
+                                           target="_blank" class="text-decoration-none">
+                                            <?php echo htmlspecialchars($proposta['produtor_celular']); ?>
+                                            <i class="bi bi-whatsapp text-success"></i>
+                                        </a>
+                                    </p>
                                 </div>
                             </div>
 
                             <!-- Detalhes do Produto -->
                             <div class="col-md-5">
-                                <h4 class="card-title text-success"><?php echo htmlspecialchars($proposta['nome']); ?></h4>
+                                <h4 class="card-title text-success">
+                                    <?php echo htmlspecialchars($proposta['nome']); ?>
+                                    <span class="badge bg-warning text-dark rounded-pill">Pendente</span>
+                                </h4>
                                 
-                                <p class="card-text"><?php echo htmlspecialchars($proposta['descricao']); ?></p>
+                                <p class="card-text"><?php echo nl2br(htmlspecialchars($proposta['descricao'] ?? 'Sem descrição')); ?></p>
                                 
                                 <div class="row g-2 mb-3">
                                     <div class="col-6">
                                         <span class="info-badge">
                                             <i class="bi bi-tag"></i> 
-                                            <?php echo htmlspecialchars($proposta['tipo']); ?>
+                                            <?php echo htmlspecialchars($proposta['tipo'] ?? 'Sem tipo'); ?>
                                         </span>
                                     </div>
                                     <div class="col-6">
                                         <span class="info-badge">
                                             <i class="bi bi-box-seam"></i> 
-                                            <?php echo $proposta['quantidade_disponivel']; ?> unidades
+                                            <?php echo number_format($proposta['quantidade_disponivel'] ?? 0, 0, ',', '.'); ?> 
+                                            <span class="unidade-badge"><?php echo $proposta['unidade_medida'] ?? 'KG'; ?></span>
                                         </span>
                                     </div>
                                 </div>
 
                                 <!-- Comparação de Preços -->
                                 <div class="price-comparison">
-                                    <h6 class="fw-bold mb-2">Análise de Preços</h6>
+                                    <h6 class="fw-bold mb-2">
+                                        <i class="bi bi-cash-coin"></i> Análise de Preços
+                                    </h6>
                                     <div class="row text-center">
                                         <div class="col-6">
-                                            <small class="text-muted">Sugerido pelo Produtor</small>
+                                            <small class="text-muted">Preço do Produtor</small>
                                             <p class="h5 text-warning mb-1">
-                                                R$ <?php echo number_format($proposta['preco_sugerido'], 2, ',', '.'); ?>
+                                                R$ <?php echo number_format($proposta['preco_sugerido'] ?? 0, 2, ',', '.'); ?>
                                             </p>
+                                            <small class="text-muted">(Custo)</small>
                                         </div>
                                         <div class="col-6">
-                                            <small class="text-muted">Preço Final Sugerido</small>
+                                            <small class="text-muted">Preço de Venda Sugerido</small>
                                             <p class="h5 text-success mb-1" id="preco-final-<?php echo $proposta['id']; ?>">
-                                                R$ <?php echo number_format($proposta['preco_sugerido'] * 1.2, 2, ',', '.'); ?>
+                                                R$ <?php echo number_format(($proposta['preco_sugerido'] ?? 0) * 1.2, 2, ',', '.'); ?>
                                             </p>
+                                            <small class="margin-beneficio">
+                                                +20% de margem (R$ <?php echo number_format(($proposta['preco_sugerido'] ?? 0) * 0.2, 2, ',', '.'); ?>)
+                                            </small>
                                         </div>
                                     </div>
                                 </div>
@@ -386,8 +529,8 @@ try {
                                 <?php if (!empty($proposta['observacoes'])): ?>
                                     <div class="mt-3 p-2 bg-light rounded">
                                         <small class="text-muted">
-                                            <strong>Observações do Produtor:</strong> 
-                                            <?php echo htmlspecialchars($proposta['observacoes']); ?>
+                                            <strong><i class="bi bi-chat-left-text"></i> Observações do Produtor:</strong><br>
+                                            <?php echo nl2br(htmlspecialchars($proposta['observacoes'])); ?>
                                         </small>
                                     </div>
                                 <?php endif; ?>
@@ -395,7 +538,10 @@ try {
                                 <div class="mt-3">
                                     <small class="text-muted">
                                         <i class="bi bi-calendar"></i> 
-                                        Proposta enviada em <?php echo $proposta['data_criacao_formatada']; ?>
+                                        Proposta enviada em <?php 
+                                            $data = new DateTime($proposta['data_criacao']);
+                                            echo $data->format('d/m/Y \à\s H:i');
+                                        ?>
                                     </small>
                                 </div>
                             </div>
@@ -408,8 +554,8 @@ try {
                                             data-bs-target="#modalAprovar"
                                             data-proposta-id="<?php echo $proposta['id']; ?>"
                                             data-proposta-nome="<?php echo htmlspecialchars($proposta['nome']); ?>"
-                                            data-preco-sugerido="<?php echo $proposta['preco_sugerido']; ?>">
-                                        <i class="bi bi-check-lg"></i> Aprovar
+                                            data-preco-sugerido="<?php echo $proposta['preco_sugerido'] ?? 0; ?>">
+                                        <i class="bi bi-check-lg"></i> Aprovar Produto
                                     </button>
                                     
                                     <button type="button" class="btn btn-rejeitar btn-lg"
@@ -417,7 +563,26 @@ try {
                                             data-bs-target="#modalRejeitar"
                                             data-proposta-id="<?php echo $proposta['id']; ?>"
                                             data-proposta-nome="<?php echo htmlspecialchars($proposta['nome']); ?>">
-                                        <i class="bi bi-x-lg"></i> Rejeitar
+                                        <i class="bi bi-x-lg"></i> Rejeitar Proposta
+                                    </button>
+                                    
+                                    <button type="button" 
+                                       class="btn btn-outline-secondary"
+                                       data-bs-toggle="modal"
+                                       data-bs-target="#modalDetalhes"
+                                       data-proposta-id="<?php echo $proposta['id']; ?>"
+                                       data-proposta-nome="<?php echo htmlspecialchars($proposta['nome']); ?>"
+                                       data-proposta-descricao="<?php echo htmlspecialchars($proposta['descricao'] ?? 'Sem descrição'); ?>"
+                                       data-proposta-tipo="<?php echo htmlspecialchars($proposta['tipo'] ?? 'Sem tipo'); ?>"
+                                       data-proposta-unidade="<?php echo $proposta['unidade_medida'] ?? 'KG'; ?>"
+                                       data-proposta-quantidade="<?php echo $proposta['quantidade_disponivel'] ?? 0; ?>"
+                                       data-proposta-preco="<?php echo number_format($proposta['preco_sugerido'] ?? 0, 2, ',', '.'); ?>"
+                                       data-proposta-obs="<?php echo htmlspecialchars($proposta['observacoes'] ?? ''); ?>"
+                                       data-proposta-data="<?php 
+                                            $data = new DateTime($proposta['data_criacao']);
+                                            echo $data->format('d/m/Y \à\s H:i');
+                                       ?>">
+                                        <i class="bi bi-info-circle"></i> Mais Detalhes
                                     </button>
                                 </div>
                             </div>
@@ -433,36 +598,61 @@ try {
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">Aprovar Produto</h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-check-circle"></i> Aprovar Produto
+                    </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form method="POST">
+                <form method="POST" id="formAprovar">
                     <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
                     <input type="hidden" name="proposta_id" id="aprovar-proposta-id">
                     <input type="hidden" name="acao" value="aprovar">
                     
                     <div class="modal-body">
-                        <p>Você está prestes a aprovar o produto: <strong id="aprovar-produto-nome"></strong></p>
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> 
+                            Ao aprovar, o produto será publicado na loja e o produtor será notificado.
+                        </div>
+                        
+                        <p>Produto: <strong id="aprovar-produto-nome"></strong></p>
                         
                         <div class="mb-3">
-                            <label for="preco_final" class="form-label">Preço Final de Venda (R$)</label>
-                            <input type="number" step="0.01" class="form-control modal-price-input" 
-                                   id="preco_final" name="preco_final" required
-                                   placeholder="0,00">
+                            <label for="preco_final" class="form-label fw-bold">
+                                Preço Final de Venda (R$)
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="number" step="0.01" min="0.01" max="999999.99" 
+                                       class="form-control modal-price-input" 
+                                       id="preco_final" name="preco_final" required
+                                       placeholder="0,00">
+                            </div>
                             <div class="form-text">
-                                Preço sugerido: R$ <span id="preco-sugerido"></span>
+                                Preço sugerido pelo produtor: R$ <span id="preco-sugerido"></span><br>
+                                Margem sugerida (20%): R$ <span id="margem-sugerida"></span><br>
+                                <strong>Preço sugerido com margem: R$ <span id="preco-com-margem"></span></strong>
                             </div>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="observacoes_admin" class="form-label">Observações (Opcional)</label>
+                            <label for="observacoes_admin" class="form-label">
+                                <i class="bi bi-chat-left-text"></i> Observações (Opcional)
+                            </label>
                             <textarea class="form-control" id="observacoes_admin" name="observacoes_admin" 
-                                      rows="3" placeholder="Observações para o produtor..."></textarea>
+                                      rows="3" placeholder="Observações para o produtor... (opcional)"
+                                      maxlength="500"></textarea>
+                            <div class="form-text">
+                                Máximo 500 caracteres. Restam: <span id="contador-caracteres">500</span>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-success">Confirmar Aprovação</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-lg"></i> Confirmar Aprovação
+                        </button>
                     </div>
                 </form>
             </div>
@@ -474,29 +664,93 @@ try {
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title">Rejeitar Proposta</h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-x-circle"></i> Rejeitar Proposta
+                    </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form method="POST">
+                <form method="POST" id="formRejeitar">
                     <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
                     <input type="hidden" name="proposta_id" id="rejeitar-proposta-id">
                     <input type="hidden" name="acao" value="rejeitar">
                     
                     <div class="modal-body">
-                        <p>Você está prestes a rejeitar a proposta: <strong id="rejeitar-produto-nome"></strong></p>
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> 
+                            Ao rejeitar, o produtor será notificado e poderá ajustar a proposta.
+                        </div>
+                        
+                        <p>Proposta: <strong id="rejeitar-produto-nome"></strong></p>
                         
                         <div class="mb-3">
-                            <label for="observacoes_rejeicao" class="form-label">Motivo da Rejeição</label>
+                            <label for="observacoes_rejeicao" class="form-label fw-bold">
+                                <i class="bi bi-chat-left-text"></i> Motivo da Rejeição *
+                            </label>
                             <textarea class="form-control" id="observacoes_rejeicao" name="observacoes_admin" 
-                                      rows="4" required placeholder="Explique o motivo da rejeição para o produtor..."></textarea>
-                            <div class="form-text">Esta observação será enviada ao produtor.</div>
+                                      rows="4" required 
+                                      placeholder="Explique claramente o motivo da rejeição para que o produtor possa fazer os ajustes necessários..."
+                                      maxlength="500"></textarea>
+                            <div class="form-text">
+                                Este campo é obrigatório. O produtor receberá esta justificativa.
+                                Máximo 500 caracteres. Restam: <span id="contador-caracteres-rejeicao">500</span>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-danger">Confirmar Rejeição</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-x-lg"></i> Confirmar Rejeição
+                        </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Detalhes -->
+    <div class="modal fade" id="modalDetalhes" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-info-circle"></i> Detalhes da Proposta
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <h4 id="detalhes-produto-nome" class="text-success mb-3"></h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="bi bi-card-text"></i> Descrição</h6>
+                            <p id="detalhes-descricao" class="text-muted"></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="bi bi-tags"></i> Informações</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Tipo:</strong> <span id="detalhes-tipo"></span></li>
+                                <li><strong>Unidade:</strong> <span id="detalhes-unidade"></span></li>
+                                <li><strong>Quantidade:</strong> <span id="detalhes-quantidade"></span></li>
+                                <li><strong>Preço Sugerido:</strong> R$ <span id="detalhes-preco"></span></li>
+                                <li><strong>Data da Proposta:</strong> <span id="detalhes-data"></span></li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div id="detalhes-observacoes-container" class="mt-3" style="display: none;">
+                        <h6><i class="bi bi-chat-left-text"></i> Observações do Produtor</h6>
+                        <div class="p-3 bg-light rounded">
+                            <p id="detalhes-observacoes" class="mb-0"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Fechar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -510,47 +764,161 @@ try {
         document.addEventListener('DOMContentLoaded', function() {
             // Modal de Aprovação
             const modalAprovar = document.getElementById('modalAprovar');
-            modalAprovar.addEventListener('show.bs.modal', function(event) {
-                const button = event.relatedTarget;
-                const propostaId = button.getAttribute('data-proposta-id');
-                const produtoNome = button.getAttribute('data-proposta-nome');
-                const precoSugerido = button.getAttribute('data-preco-sugerido');
-                
-                document.getElementById('aprovar-proposta-id').value = propostaId;
-                document.getElementById('aprovar-produto-nome').textContent = produtoNome;
-                document.getElementById('preco-sugerido').textContent = 
-                    parseFloat(precoSugerido).toFixed(2).replace('.', ',');
-                
-                // Sugerir preço com margem
-                const precoFinal = (parseFloat(precoSugerido) * 1.2).toFixed(2);
-                document.getElementById('preco_final').value = precoFinal;
-            });
+            if (modalAprovar) {
+                modalAprovar.addEventListener('show.bs.modal', function(event) {
+                    const button = event.relatedTarget;
+                    const propostaId = button.getAttribute('data-proposta-id');
+                    const produtoNome = button.getAttribute('data-proposta-nome');
+                    const precoSugerido = parseFloat(button.getAttribute('data-preco-sugerido')) || 0;
+                    
+                    document.getElementById('aprovar-proposta-id').value = propostaId;
+                    document.getElementById('aprovar-produto-nome').textContent = produtoNome;
+                    
+                    // Formatar valores
+                    document.getElementById('preco-sugerido').textContent = 
+                        precoSugerido.toFixed(2).replace('.', ',');
+                    
+                    const margem = precoSugerido * 0.2;
+                    document.getElementById('margem-sugerida').textContent = 
+                        margem.toFixed(2).replace('.', ',');
+                    
+                    const precoComMargem = precoSugerido * 1.2;
+                    document.getElementById('preco-com-margem').textContent = 
+                        precoComMargem.toFixed(2).replace('.', ',');
+                    
+                    // Sugerir preço com margem no campo de entrada
+                    document.getElementById('preco_final').value = precoComMargem.toFixed(2);
+                    
+                    // Resetar contador de caracteres
+                    document.getElementById('observacoes_admin').value = '';
+                    atualizarContador('observacoes_admin', 'contador-caracteres');
+                });
+            }
             
             // Modal de Rejeição
             const modalRejeitar = document.getElementById('modalRejeitar');
-            modalRejeitar.addEventListener('show.bs.modal', function(event) {
-                const button = event.relatedTarget;
-                const propostaId = button.getAttribute('data-proposta-id');
-                const produtoNome = button.getAttribute('data-proposta-nome');
+            if (modalRejeitar) {
+                modalRejeitar.addEventListener('show.bs.modal', function(event) {
+                    const button = event.relatedTarget;
+                    const propostaId = button.getAttribute('data-proposta-id');
+                    const produtoNome = button.getAttribute('data-proposta-nome');
+                    
+                    document.getElementById('rejeitar-proposta-id').value = propostaId;
+                    document.getElementById('rejeitar-produto-nome').textContent = produtoNome;
+                    
+                    // Resetar contador de caracteres
+                    document.getElementById('observacoes_rejeicao').value = '';
+                    atualizarContador('observacoes_rejeicao', 'contador-caracteres-rejeicao');
+                });
+            }
+            
+            // Modal de Detalhes
+            const modalDetalhes = document.getElementById('modalDetalhes');
+            if (modalDetalhes) {
+                modalDetalhes.addEventListener('show.bs.modal', function(event) {
+                    const button = event.relatedTarget;
+                    
+                    document.getElementById('detalhes-produto-nome').textContent = 
+                        button.getAttribute('data-proposta-nome');
+                    document.getElementById('detalhes-descricao').textContent = 
+                        button.getAttribute('data-proposta-descricao');
+                    document.getElementById('detalhes-tipo').textContent = 
+                        button.getAttribute('data-proposta-tipo');
+                    document.getElementById('detalhes-unidade').textContent = 
+                        button.getAttribute('data-proposta-unidade');
+                    document.getElementById('detalhes-quantidade').textContent = 
+                        button.getAttribute('data-proposta-quantidade');
+                    document.getElementById('detalhes-preco').textContent = 
+                        button.getAttribute('data-proposta-preco');
+                    document.getElementById('detalhes-data').textContent = 
+                        button.getAttribute('data-proposta-data');
+                    
+                    const observacoes = button.getAttribute('data-proposta-obs');
+                    if (observacoes && observacoes.trim() !== '') {
+                        document.getElementById('detalhes-observacoes').textContent = observacoes;
+                        document.getElementById('detalhes-observacoes-container').style.display = 'block';
+                    } else {
+                        document.getElementById('detalhes-observacoes-container').style.display = 'none';
+                    }
+                });
+            }
+            
+            // Função para atualizar contador de caracteres
+            function atualizarContador(textareaId, contadorId) {
+                const textarea = document.getElementById(textareaId);
+                const contador = document.getElementById(contadorId);
                 
-                document.getElementById('rejeitar-proposta-id').value = propostaId;
-                document.getElementById('rejeitar-produto-nome').textContent = produtoNome;
-            });
+                if (textarea && contador) {
+                    textarea.addEventListener('input', function() {
+                        const maxLength = parseInt(this.getAttribute('maxlength')) || 500;
+                        const currentLength = this.value.length;
+                        contador.textContent = maxLength - currentLength;
+                        
+                        if (currentLength > maxLength) {
+                            this.value = this.value.substring(0, maxLength);
+                            contador.textContent = 0;
+                        }
+                    });
+                    
+                    // Inicializar contador
+                    const maxLength = parseInt(textarea.getAttribute('maxlength')) || 500;
+                    contador.textContent = maxLength - textarea.value.length;
+                }
+            }
+            
+            // Inicializar contadores
+            atualizarContador('observacoes_admin', 'contador-caracteres');
+            atualizarContador('observacoes_rejeicao', 'contador-caracteres-rejeicao');
+            
+            // Validação de formulário
+            const formAprovar = document.getElementById('formAprovar');
+            if (formAprovar) {
+                formAprovar.addEventListener('submit', function(e) {
+                    const precoFinal = document.getElementById('preco_final');
+                    if (!precoFinal.value || parseFloat(precoFinal.value) <= 0) {
+                        e.preventDefault();
+                        alert('Por favor, insira um preço válido maior que zero.');
+                        precoFinal.focus();
+                    }
+                });
+            }
+            
+            const formRejeitar = document.getElementById('formRejeitar');
+            if (formRejeitar) {
+                formRejeitar.addEventListener('submit', function(e) {
+                    const observacoes = document.getElementById('observacoes_rejeicao');
+                    if (!observacoes.value.trim()) {
+                        e.preventDefault();
+                        alert('Por favor, informe o motivo da rejeição.');
+                        observacoes.focus();
+                    }
+                });
+            }
             
             // Formatação automática do preço
             const precoInputs = document.querySelectorAll('input[type="number"][step="0.01"]');
             precoInputs.forEach(input => {
                 input.addEventListener('blur', function() {
                     if (this.value) {
-                        this.value = parseFloat(this.value).toFixed(2);
+                        let value = parseFloat(this.value);
+                        if (value < 0.01) value = 0.01;
+                        if (value > 999999.99) value = 999999.99;
+                        this.value = value.toFixed(2);
+                    }
+                });
+                
+                input.addEventListener('input', function() {
+                    let value = parseFloat(this.value);
+                    if (value > 999999.99) {
+                        this.value = 999999.99;
                     }
                 });
             });
         });
     </script>
     <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
-  <script>
-    new window.VLibras.Widget('https://vlibras.gov.br/app');
-  </script>
+    <script>
+        new window.VLibras.Widget('https://vlibras.gov.br/app');
+    </script>
 </body>
 </html>

@@ -117,6 +117,12 @@ try {
             color: var(--verde-principal);
         }
         
+        .unidade-badge {
+            background-color: #6c757d;
+            color: white;
+            font-size: 0.75rem;
+        }
+        
         .price {
             color: var(--verde-principal);
             font-weight: bold;
@@ -134,14 +140,20 @@ try {
             border-radius: 50%;
             margin: 0 5px;
         }
+        
+        .unidade-info {
+            font-size: 0.85rem;
+            color: #666;
+        }
     </style>
 </head>
 <body>
     <!-- VLibras -->
-  <div vw class="enabled">
-    <div vw-access-button class="active"></div>
-    <div vw-plugin-wrapper></div>
-  </div>
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper></div>
+    </div>
+    
     <?php include 'includes/_menu.php'; ?>
 
     <!-- Hero Section -->
@@ -164,7 +176,7 @@ try {
     <div class="container" id="produtos">
         <?php if (isset($error)): ?>
             <div class="alert alert-danger text-center">
-                <?php echo $error; ?>
+                <?php echo htmlspecialchars($error); ?>
             </div>
         <?php elseif (empty($tipos)): ?>
             <div class="text-center py-5">
@@ -178,7 +190,7 @@ try {
                     <section class="carousel-section">
                         <h2 class="section-title">
                             <i class="bi bi-tags-fill me-2"></i>
-                            <?php echo ucfirst($tipo); ?>s
+                            <?php echo htmlspecialchars(ucfirst($tipo)); ?>s
                         </h2>
                         
                         <div id="carousel-<?php echo htmlspecialchars($tipo); ?>" class="carousel slide" data-bs-ride="carousel">
@@ -196,29 +208,36 @@ try {
                                                     'https://via.placeholder.com/300x200/CCCCCC/969696?text=Sem+Imagem';
                                                 
                                                 $estoqueClasse = $produto['quantidade_estoque'] <= 5 ? 'estoque-baixo' : '';
+                                                
+                                                // Formatar unidade de medida
+                                                $unidade_texto = htmlspecialchars($produto['unidade_medida']);
+                                                $quantidade_texto = $produto['quantidade_estoque'] . ' ' . $unidade_texto;
                                             ?>
                                                 <div class="col-md-4">
                                                     <div class="card product-card <?php echo $estoqueClasse; ?>">
-                                                        <img src="<?php echo $imagemSrc; ?>" 
+                                                        <img src="<?php echo htmlspecialchars($imagemSrc); ?>" 
                                                              class="card-img-top product-image" 
                                                              alt="<?php echo htmlspecialchars($produto['nome']); ?>"
                                                              onerror="this.src='https://via.placeholder.com/300x200/CCCCCC/969696?text=Imagem+Não+Encontrada'">
                                                         <div class="card-body d-flex flex-column">
                                                             <div class="d-flex justify-content-between align-items-start mb-2">
                                                                 <h5 class="card-title"><?php echo htmlspecialchars($produto['nome']); ?></h5>
-                                                                <span class="badge tipo-badge"><?php echo htmlspecialchars($produto['tipo']); ?></span>
+                                                                <div>
+                                                                    <span class="badge tipo-badge"><?php echo htmlspecialchars($produto['tipo']); ?></span>
+                                                                    <span class="badge unidade-badge"><?php echo $unidade_texto; ?></span>
+                                                                </div>
                                                             </div>
                                                             <p class="card-text flex-grow-1"><?php echo htmlspecialchars($produto['descricao']); ?></p>
                                                             <div class="mt-auto">
-                                                                <p class="price mb-2">R$ <?php echo number_format($produto['preco'], 2, ',', '.'); ?></p>
+                                                                <p class="price mb-2">R$ <?php echo number_format($produto['preco'], 2, ',', '.'); ?> /<?php echo $unidade_texto; ?></p>
                                                                 <p class="card-text">
                                                                     <small class="text-muted">
                                                                         <i class="bi bi-box-seam"></i>
-                                                                        <?php echo $produto['quantidade_estoque']; ?> unidades disponíveis
+                                                                        <?php echo $quantidade_texto; ?> disponíveis
                                                                     </small>
                                                                 </p>
                                                                 <?php if ($produto['quantidade_estoque'] > 0): ?>
-                                                                    <a href="encomenda.php?id=<?php echo $produto['id']; ?>" 
+                                                                    <a href="encomenda.php?id=<?php echo intval($produto['id']); ?>" 
                                                                        class="btn btn-encomendar w-100">
                                                                         <i class="bi bi-cart-plus"></i> Encomendar
                                                                     </a>
@@ -313,9 +332,9 @@ try {
             });
         });
     </script>
-     <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
-  <script>
-    new window.VLibras.Widget('https://vlibras.gov.br/app');
-  </script>
+    <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    <script>
+        new window.VLibras.Widget('https://vlibras.gov.br/app');
+    </script>
 </body>
 </html>

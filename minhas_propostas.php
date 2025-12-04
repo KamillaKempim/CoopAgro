@@ -3,7 +3,7 @@ require_once 'includes/auth.php';
 require_once 'config/database.php';
 checkAuth();
 
-$usuario_id = $_SESSION['user_id'];
+$usuario_id = intval($_SESSION['user_id']);
 
 // Verifica se o usuário é produtor
 try {
@@ -13,6 +13,7 @@ try {
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($usuario['tipo_usuario'] !== 'Produtor') {
+        $_SESSION['error'] = 'Acesso restrito a produtores.';
         header("Location: perfil.php");
         exit();
     }
@@ -22,8 +23,10 @@ try {
         SELECT 
             pp.*,
             DATE_FORMAT(pp.data_criacao, '%d/%m/%Y às %H:%i') as data_formatada,
-            DATE_FORMAT(pp.data_avaliacao, '%d/%m/%Y às %H:%i') as data_avaliacao_formatada
+            DATE_FORMAT(pp.data_avaliacao, '%d/%m/%Y às %H:%i') as data_avaliacao_formatada,
+            u.nome as avaliador_nome
         FROM produtos_propostos pp 
+        LEFT JOIN usuarios u ON pp.avaliado_por = u.id
         WHERE pp.produtor_id = ? 
         ORDER BY 
             CASE 
@@ -43,7 +46,8 @@ try {
     $rejeitadas = array_filter($propostas, function($p) { return $p['status'] === 'rejeitado'; });
     
 } catch(PDOException $e) {
-    $error = "Erro ao carregar propostas: " . $e->getMessage();
+    $error = "Erro ao carregar propostas: " . htmlspecialchars($e->getMessage());
+    error_log("Erro minhas_propostas.php - Usuário: $usuario_id - Erro: " . $e->getMessage());
 }
 ?>
 
@@ -98,6 +102,7 @@ try {
             box-shadow: 0 3px 10px rgba(0,0,0,0.1);
             transition: all 0.3s ease;
             margin-bottom: 20px;
+            overflow: hidden;
         }
         
         .proposta-card:hover {
@@ -156,6 +161,12 @@ try {
             height: 100px;
             object-fit: cover;
             border-radius: 10px;
+            border: 2px solid #dee2e6;
+        }
+        
+        .proposta-image-container {
+            position: relative;
+            display: inline-block;
         }
         
         .info-badge {
@@ -173,15 +184,31 @@ try {
             margin-bottom: 20px;
             font-weight: 600;
         }
+        
+        .unidade-badge {
+            background-color: #6c757d;
+            color: white;
+            font-size: 0.75rem;
+        }
+        
+        .imagem-error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #dc3545;
+            font-size: 0.8rem;
+            text-align: center;
+            width: 90px;
+        }
     </style>
 </head>
 <body>
-
- <!-- VLibras -->
-  <div vw class="enabled">
-    <div vw-access-button class="active"></div>
-    <div vw-plugin-wrapper></div>
-  </div>
+    <!-- VLibras -->
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper></div>
+    </div>
 
     <?php include 'includes/_menu.php'; ?>
 
@@ -203,8 +230,19 @@ try {
     </section>
 
     <div class="container">
-        <?php if (isset($error)): ?>
-            <div class="alert alert-danger"><?php echo $error; ?></div>
+        <?php 
+        if (isset($_SESSION['error'])) {
+            echo '<div class="alert alert-danger">' . htmlspecialchars($_SESSION['error']) . '</div>';
+            unset($_SESSION['error']);
+        }
+        
+        if (isset($_SESSION['success'])) {
+            echo '<div class="alert alert-success">' . htmlspecialchars($_SESSION['success']) . '</div>';
+            unset($_SESSION['success']);
+        }
+        
+        if (isset($error)): ?>
+            <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
         <!-- Estatísticas -->
@@ -261,33 +299,59 @@ try {
             </div>
         <?php else: ?>
             <div class="row">
-                <?php foreach ($propostas as $proposta): ?>
+                <?php foreach ($propostas as $proposta): 
+                    $unidade_texto = htmlspecialchars($proposta['unidade_medida'] ?? 'KG');
+                    
+                    // DEBUG: Verificar informações da imagem
+                    // echo "<!-- DEBUG: imagem_url = " . htmlspecialchars($proposta['imagem_url']) . " -->";
+                ?>
                     <div class="col-lg-6 mb-4">
                         <div class="card proposta-card">
                             <div class="card-body">
                                 <div class="row">
                                     <div class="col-md-4 mb-3 mb-md-0">
-                                        <?php 
-                                        $imagemSrc = !empty($proposta['imagem_url']) ? 
-                                            'uploads/propostas/' . htmlspecialchars($proposta['imagem_url']) : 
-                                            'https://via.placeholder.com/150x150/CCCCCC/969696?text=Sem+Imagem';
-                                        ?>
-                                        <img src="<?php echo $imagemSrc; ?>" 
-                                             alt="<?php echo htmlspecialchars($proposta['nome']); ?>"
-                                             class="proposta-image w-100"
-                                             onerror="this.src='https://via.placeholder.com/150x150/CCCCCC/969696?text=Imagem+Não+Encontrada'">
+                                        <div class="proposta-image-container">
+                                            <?php 
+                                            // Verificar se a imagem existe
+                                            $imagemPath = 'uploads/produtos/' . htmlspecialchars($proposta['imagem_url'] ?? '');
+                                            $imagemSrc = '';
+                                            $imagemExiste = false;
+                                            
+                                            if (!empty($proposta['imagem_url']) && file_exists($imagemPath)) {
+                                                $imagemExiste = true;
+                                                $imagemSrc = htmlspecialchars($imagemPath);
+                                            } else {
+                                                // Se a imagem não existe, usar placeholder
+                                                $imagemSrc = 'https://via.placeholder.com/150x150/CCCCCC/969696?text=Sem+Imagem';
+                                            }
+                                            ?>
+                                            
+                                            <img src="<?php echo $imagemSrc; ?>" 
+                                                 alt="<?php echo htmlspecialchars($proposta['nome']); ?>"
+                                                 class="proposta-image w-100"
+                                                 data-original="<?php echo htmlspecialchars($proposta['imagem_url'] ?? ''); ?>"
+                                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/150x150/CCCCCC/969696?text=Imagem+Não+Encontrada';">
+                                                 
+                                            <?php if (!$imagemExiste && !empty($proposta['imagem_url'])): ?>
+                                                <div class="imagem-error">
+                                                    <i class="bi bi-exclamation-triangle"></i>
+                                                    <br>
+                                                    <small>Imagem não encontrada</small>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                     <div class="col-md-8">
                                         <div class="d-flex justify-content-between align-items-start mb-2">
                                             <h5 class="card-title mb-0"><?php echo htmlspecialchars($proposta['nome']); ?></h5>
-                                            <span class="status-badge badge-<?php echo $proposta['status']; ?>">
+                                            <span class="status-badge badge-<?php echo htmlspecialchars($proposta['status']); ?>">
                                                 <?php 
                                                 $statusText = [
                                                     'pendente' => 'Aguardando Análise',
                                                     'aprovado' => 'Aprovado',
                                                     'rejeitado' => 'Rejeitado'
                                                 ];
-                                                echo $statusText[$proposta['status']];
+                                                echo htmlspecialchars($statusText[$proposta['status']]);
                                                 ?>
                                             </span>
                                         </div>
@@ -304,15 +368,21 @@ try {
                                                 </span>
                                             </div>
                                             <div class="col-6">
+                                                <span class="badge unidade-badge">
+                                                    <i class="bi bi-rulers"></i> 
+                                                    <?php echo $unidade_texto; ?>
+                                                </span>
+                                            </div>
+                                            <div class="col-6">
                                                 <span class="info-badge">
                                                     <i class="bi bi-box-seam"></i> 
-                                                    <?php echo $proposta['quantidade_disponivel']; ?> unidades
+                                                    <?php echo $proposta['quantidade_disponivel']; ?> <?php echo $unidade_texto; ?>
                                                 </span>
                                             </div>
                                             <div class="col-6">
                                                 <span class="info-badge">
                                                     <i class="bi bi-currency-dollar"></i> 
-                                                    R$ <?php echo number_format($proposta['preco_sugerido'], 2, ',', '.'); ?>
+                                                    R$ <?php echo number_format($proposta['preco_sugerido'], 2, ',', '.'); ?>/<?php echo $unidade_texto; ?>
                                                 </span>
                                             </div>
                                         </div>
@@ -320,13 +390,18 @@ try {
                                         <div class="d-flex justify-content-between align-items-center">
                                             <small class="text-muted">
                                                 <i class="bi bi-calendar"></i> 
-                                                Enviada em <?php echo $proposta['data_formatada']; ?>
+                                                Enviada em <?php echo htmlspecialchars($proposta['data_formatada']); ?>
                                             </small>
                                             
                                             <?php if ($proposta['status'] !== 'pendente' && !empty($proposta['data_avaliacao_formatada'])): ?>
                                                 <small class="text-muted">
                                                     <i class="bi bi-clock"></i> 
-                                                    Avaliada em <?php echo $proposta['data_avaliacao_formatada']; ?>
+                                                    Avaliada em <?php echo htmlspecialchars($proposta['data_avaliacao_formatada']); ?>
+                                                    <?php if (!empty($proposta['avaliador_nome'])): ?>
+                                                        <br>
+                                                        <i class="bi bi-person"></i> 
+                                                        Por: <?php echo htmlspecialchars($proposta['avaliador_nome']); ?>
+                                                    <?php endif; ?>
                                                 </small>
                                             <?php endif; ?>
                                         </div>
@@ -334,8 +409,17 @@ try {
                                         <?php if (!empty($proposta['observacoes'])): ?>
                                             <div class="mt-3 p-2 bg-light rounded">
                                                 <small class="text-muted">
-                                                    <strong>Observações:</strong> 
+                                                    <strong>Observações da avaliação:</strong> 
                                                     <?php echo htmlspecialchars($proposta['observacoes']); ?>
+                                                </small>
+                                            </div>
+                                        <?php endif; ?>
+                                        
+                                        <?php if ($proposta['status'] === 'aprovado'): ?>
+                                            <div class="mt-3 p-2 bg-success bg-opacity-10 rounded border border-success">
+                                                <small class="text-success">
+                                                    <i class="bi bi-check-circle"></i> 
+                                                    <strong>Esta proposta foi aprovada!</strong> O produto já está disponível no catálogo.
                                                 </small>
                                             </div>
                                         <?php endif; ?>
@@ -414,11 +498,18 @@ try {
                     card.style.transform = 'translateX(0)';
                 }, index * 100 + 400);
             });
+            
+            // Debug: Verificar informações das imagens
+            const imagens = document.querySelectorAll('.proposta-image');
+            imagens.forEach(img => {
+                const original = img.getAttribute('data-original');
+                console.log('Imagem original:', original, 'Src atual:', img.src);
+            });
         });
     </script>
-     <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
-  <script>
-    new window.VLibras.Widget('https://vlibras.gov.br/app');
-  </script>
+    <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    <script>
+        new window.VLibras.Widget('https://vlibras.gov.br/app');
+    </script>
 </body>
 </html>
