@@ -4,10 +4,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="shortcut icon" href="images/logo.png" type="image/x-icon" />
+  <link rel="shortcut icon" href="Images/logo.png" type="image/x-icon" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="CSS/index.css" />
+  <link rel="stylesheet" href="css/index.css" />
 </head>
 
 <body>
@@ -22,7 +22,7 @@
   </header>
 
   <main class="hero">
-  <img src="images/Principal.png" alt="Imagem Principal" class="hero-img">
+  <img src="Images/Principal.png" alt="Imagem Principal" class="hero-img">
 </main>
 
 <!-- Painel acessibilidade -->
@@ -209,12 +209,12 @@ btnAbrir.addEventListener('click', () => {
 
       <!--Alison -->
       <div class="card-equipe">
-        <img src="images/alisson.png" alt="Alison" class="foto-perfil">
+        <img src="Images/alisson.png" alt="Alison" class="foto-perfil">
         <h3>Alison</h3>
         <p>
           Designer cursando o 3º ano do ensino médio na Escola Cordeiro, responsável pelo desenvolvimento dos protótipos e criação das artes do site, o “rapaz da arte”.
         </p>
-        <img src="images/icon-design.png" alt="Ícone design" class="icone-card">
+        <img src="Images/icon-design.png" alt="Ícone design" class="icone-card">
       </div>
 
       <!--Kamilla -->
@@ -224,17 +224,17 @@ btnAbrir.addEventListener('click', () => {
         <p>
           Estudante de informática pelo IFRO cursando o 3º ano do ensino médio, à frente do front-end responsável pela estilização do site, a “menina do front”.
         </p>
-        <img src="images/icon-front.png" alt="Ícone front" class="icone-card">
+        <img src="Images/icon-front.png" alt="Ícone front" class="icone-card">
       </div>
 
       <!--Jhiewertton -->
       <div class="card-equipe">
-        <img src="images/jhiewertton.png" alt="Jhiewertton" class="foto-perfil">
+        <img src="Images/jhiewertton.png" alt="Jhiewertton" class="foto-perfil">
         <h3>Jhiewertton</h3>
         <p>
           Dev Sec-ops acadêmico de Sistemas de Informação, cursando o 7º período, responsável pelo backend, banco de dados e infraestrutura, o “carinha dos servidores e das gambiarras”.
         </p>
-        <img src="images/icon-backend.png" alt="Ícone backend" class="icone-card">
+        <img src="Images/icon-backend.png" alt="Ícone backend" class="icone-card">
       </div>
 
     </div>

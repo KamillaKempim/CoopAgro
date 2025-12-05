@@ -15,7 +15,7 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     
     <!-- CSS Personalizado -->
-     <link rel="stylesheet" href="CSS/cooperativismo.css" />
+     <link rel="stylesheet" href="css/cooperativismo.css" />
      
 </head>
 <body>
