@@ -1,8 +1,4 @@
 <?php
-// Inicia a sessão
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 ?>
 
 <!-- Menu de Navegação -->
