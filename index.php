@@ -223,7 +223,7 @@
       </div>
 
       <div class="card-equipe">
-        <img src="Images/jhiewertton.png" alt="Jhiewertton" class="foto-perfil">
+        <img src="Images/Jhiewertton.png" alt="Jhiewertton" class="foto-perfil">
         <h3>Jhiewertton</h3>
         <p>
           Dev Sec-ops acadêmico de Sistemas de Informação, cursando o 7º período, responsável pelo backend, banco de
