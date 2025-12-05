@@ -7,19 +7,17 @@ $usuario_id = intval($_SESSION['user_id']);
 
 try {
     $conn = getDBConnection();
-    
-    // Verifica se o usuário é produtor
+
     $stmtUser = $conn->prepare("SELECT tipo_usuario, nome FROM usuarios WHERE id = ?");
     $stmtUser->execute([$usuario_id]);
     $usuario = $stmtUser->fetch(PDO::FETCH_ASSOC);
-    
+
     if ($usuario['tipo_usuario'] !== 'Produtor') {
         $_SESSION['error'] = 'Acesso restrito a produtores.';
         header("Location: perfil.php");
         exit();
     }
-    
-    // Busca produtos do produtor
+
     $stmtProdutos = $conn->prepare("
         SELECT * 
         FROM produtos 
@@ -28,8 +26,8 @@ try {
     ");
     $stmtProdutos->execute([$usuario_id]);
     $produtos = $stmtProdutos->fetchAll(PDO::FETCH_ASSOC);
-    
-} catch(PDOException $e) {
+
+} catch (PDOException $e) {
     $error = "Erro ao carregar produtos: " . htmlspecialchars($e->getMessage());
     logSecurity($usuario_id, 'erro_meus_produtos', "Erro: " . $e->getMessage());
 }
@@ -37,6 +35,7 @@ try {
 
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -49,7 +48,7 @@ try {
             --verde-secundario: #4caf50;
             --verde-claro: #a5d6a7;
         }
-        
+
         .product-card {
             transition: transform 0.3s, box-shadow 0.3s;
             border-radius: 10px;
@@ -57,79 +56,286 @@ try {
             border: 1px solid #dee2e6;
             height: 100%;
         }
-        
+
         .product-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
         }
-        
+
         .product-image {
             height: 200px;
             object-fit: cover;
             width: 100%;
         }
-        
+
         .status-badge {
             font-size: 0.75rem;
             padding: 0.4em 0.8em;
         }
-        
+
         .badge-disponivel {
             background-color: var(--verde-principal);
             color: white;
         }
-        
+
         .badge-indisponivel {
             background-color: #6c757d;
             color: white;
         }
-        
+
         .unidade-badge {
             background-color: #6c757d;
             color: white;
             font-size: 0.7rem;
         }
-        
+
         .btn-success {
             background-color: var(--verde-principal);
             border-color: var(--verde-principal);
         }
-        
+
         .btn-success:hover {
             background-color: var(--verde-secundario);
             border-color: var(--verde-secundario);
         }
-        
+
         .btn-outline-success {
             color: var(--verde-principal);
             border-color: var(--verde-principal);
         }
-        
+
         .btn-outline-success:hover {
             background-color: var(--verde-principal);
             border-color: var(--verde-principal);
             color: white;
         }
-        
+
         .empty-state {
             padding: 4rem 1rem;
         }
-        
+
         .card-footer {
             background-color: #f8f9fa;
             border-top: 1px solid #dee2e6;
         }
+
+        /* Botão de acessibilidade */
+        .painel-flutuante {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        #btnAbrir {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background-color: #0c7534;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s;
+        }
+
+        #btnAbrir:hover {
+            background-color: #0b7d44;
+        }
+
+
+        .painel-acessibilidade {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 10px;
+            background: #ffffff;
+            color: rgb(11, 66, 5);
+            padding: 12px 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+
+        .painel-acessibilidade button {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s;
+            background-color: #f0f0f0;
+        }
+
+        .painel-acessibilidade button:hover {
+            background-color: #d4d4d4;
+        }
+
+
+        .modo-contraste,
+        .modo-contraste * {
+            background-color: #000 !important;
+            color: #fff !important;
+            border-color: #fff !important;
+        }
+
+        .modo-contraste a {
+            color: #FFD700 !important;
+            text-decoration: underline;
+        }
+
+        .modo-contraste img {
+            filter: brightness(0.8) !important;
+        }
+
+        .modo-contraste,
+        .modo-contraste * {
+            background-color: #000 !important;
+            color: #fff !important;
+            border-color: #fff !important;
+            fill: #fff !important;
+            stroke: #fff !important;
+        }
+
+        .modo-contraste a,
+        .modo-contraste a * {
+            color: #FFD700 !important;
+            text-decoration: underline !important;
+        }
+
+        .modo-contraste * {
+            background-image: none !important;
+        }
+
+        .modo-contraste img,
+        .modo-contraste [style*="background-image"] {
+            filter: grayscale(1) brightness(0.4) !important;
+        }
+
+        .modo-contraste .card,
+        .modo-contraste .container,
+        .modo-contraste section,
+        .modo-contraste .row,
+        .modo-contraste .col,
+        .modo-contraste footer,
+        .modo-contraste header,
+        .modo-contraste nav {
+            background-color: #000 !important;
+            color: #fff !important;
+        }
+
+        .modo-contraste button,
+        .modo-contraste .btn {
+            background-color: #222 !important;
+            color: #fff !important;
+            border: 1px solid #fff !important;
+        }
+
+        .modo-contraste .bi,
+        .modo-contraste i {
+            color: #fff !important;
+        }
+
+        .modo-contraste .carousel-item,
+        .modo-contraste .carousel-caption {
+            background-color: #000 !important;
+        }
+
+        @media (max-width: 768px) {
+            .container img {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .texto {
+                width: 100% !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero {
+                height: auto;
+            }
+
+            .hero-img {
+                width: 100%;
+                height: auto;
+                object-fit: contain;
+            }
+        }
+
+        .modo-contraste img,
+        .modo-contraste [style*="background-image"] {
+            filter: grayscale(0.2) brightness(0.8) !important;
+        }
     </style>
 </head>
+
 <body>
     <!-- VLibras -->
     <div vw class="enabled">
         <div vw-access-button class="active"></div>
         <div vw-plugin-wrapper></div>
     </div>
+    <!-- Painel acessibilidade -->
+    <div class="painel-flutuante">
+        <button id="btnAbrir">⚙️</button>
+        <div class="painel-acessibilidade" id="painelAcessibilidade">
+            <h4>Painel de Acessibilidade</h4>
+            <button onclick="contraste()"><i class="bi bi-brightness-high-fill"> </i>Alto contraste</button>
+            <button onclick="fonteMais()"><i class="bi bi-type-bold"></i></button>
+            <button onclick="fonteMenos()"><i class="bi bi-type"></i></button>
+            <button onclick="resetar()"><i class="bi bi-arrow-counterclockwise"></i> Padrão</button>
+        </div>
+    </div>
+
+
+    <script>
+        let tamanho = localStorage.getItem("fonte") || 16;
+        document.body.style.fontSize = tamanho + "px";
+
+        if (localStorage.getItem("contraste") === "ativo") {
+            document.body.classList.add("modo-contraste");
+        }
+
+        function contraste() {
+            document.body.classList.toggle("modo-contraste");
+            let ativo = document.body.classList.contains("modo-contraste");
+            localStorage.setItem("contraste", ativo ? "ativo" : "inativo");
+        }
+
+        function fonteMais() {
+            tamanho = parseInt(tamanho) + 2;
+            document.body.style.fontSize = tamanho + "px";
+            localStorage.setItem("fonte", tamanho);
+        }
+
+        function fonteMenos() {
+            tamanho = parseInt(tamanho) - 2;
+            document.body.style.fontSize = tamanho + "px";
+            localStorage.setItem("fonte", tamanho);
+        }
+
+        function resetar() {
+            document.body.classList.remove("modo-contraste");
+            document.body.style.fontSize = "16px";
+            localStorage.clear();
+        }
+
+        const btnAbrir = document.getElementById('btnAbrir');
+        const painel = document.getElementById('painelAcessibilidade');
+
+        btnAbrir.addEventListener('click', () => {
+            painel.style.display = painel.style.display === 'flex' ? 'none' : 'flex';
+        });
+    </script>
+
 
     <?php include 'includes/_menu.php'; ?>
-    
+
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="text-success">
@@ -139,19 +345,19 @@ try {
                 <i class="bi bi-plus-circle"></i> Adicionar Produto
             </a>
         </div>
-        
-        <?php 
+
+        <?php
         if (isset($_SESSION['error'])) {
             echo '<div class="alert alert-danger">' . htmlspecialchars($_SESSION['error']) . '</div>';
             unset($_SESSION['error']);
         }
-        
+
         if (isset($_SESSION['success'])) {
             echo '<div class="alert alert-success">' . htmlspecialchars($_SESSION['success']) . '</div>';
             unset($_SESSION['success']);
         }
         ?>
-        
+
         <?php if (isset($error)): ?>
             <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
         <?php elseif (empty($produtos)): ?>
@@ -167,31 +373,31 @@ try {
             </div>
         <?php else: ?>
             <div class="row">
-                <?php foreach ($produtos as $produto): 
-                    $imagemSrc = !empty($produto['imagem_url']) ? 
-                        'uploads/produtos/' . htmlspecialchars($produto['imagem_url']) : 
+                <?php foreach ($produtos as $produto):
+                    $imagemSrc = !empty($produto['imagem_url']) ?
+                        'uploads/produtos/' . htmlspecialchars($produto['imagem_url']) :
                         'https://via.placeholder.com/300x200/CCCCCC/969696?text=Sem+Imagem';
-                    
+
                     $unidade_texto = htmlspecialchars($produto['unidade_medida'] ?? 'KG');
                     $quantidade_texto = $produto['quantidade_estoque'] . ' ' . $unidade_texto;
-                ?>
+                    ?>
                     <div class="col-md-6 col-lg-4 mb-4">
                         <div class="card product-card h-100">
-                            <img src="<?php echo htmlspecialchars($imagemSrc); ?>" 
-                                 class="card-img-top product-image" 
-                                 alt="<?php echo htmlspecialchars($produto['nome']); ?>"
-                                 onerror="this.src='https://via.placeholder.com/300x200/CCCCCC/969696?text=Imagem+Não+Encontrada'">
-                            
+                            <img src="<?php echo htmlspecialchars($imagemSrc); ?>" class="card-img-top product-image"
+                                alt="<?php echo htmlspecialchars($produto['nome']); ?>"
+                                onerror="this.src='https://via.placeholder.com/300x200/CCCCCC/969696?text=Imagem+Não+Encontrada'">
+
                             <div class="card-body d-flex flex-column">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <h5 class="card-title"><?php echo htmlspecialchars($produto['nome']); ?></h5>
-                                    <span class="badge <?php echo $produto['disponivel'] ? 'badge-disponivel' : 'badge-indisponivel'; ?>">
+                                    <span
+                                        class="badge <?php echo $produto['disponivel'] ? 'badge-disponivel' : 'badge-indisponivel'; ?>">
                                         <?php echo $produto['disponivel'] ? 'Disponível' : 'Indisponível'; ?>
                                     </span>
                                 </div>
-                                
+
                                 <p class="card-text flex-grow-1"><?php echo htmlspecialchars($produto['descricao']); ?></p>
-                                
+
                                 <div class="mt-3">
                                     <div class="row g-2 mb-2">
                                         <div class="col-6">
@@ -205,32 +411,35 @@ try {
                                             </span>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <span class="text-muted">Preço:</span>
-                                        <strong class="text-success">R$ <?php echo number_format($produto['preco'], 2, ',', '.'); ?>/<?php echo $unidade_texto; ?></strong>
+                                        <strong class="text-success">R$
+                                            <?php echo number_format($produto['preco'], 2, ',', '.'); ?>/<?php echo $unidade_texto; ?></strong>
                                     </div>
-                                    
+
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <span class="text-muted">Estoque:</span>
                                         <strong><?php echo $quantidade_texto; ?></strong>
                                     </div>
-                                    
+
                                     <div class="d-flex justify-content-between align-items-center">
                                         <span class="text-muted">Cadastrado em:</span>
-                                        <small class="text-muted"><?php echo date('d/m/Y', strtotime($produto['data_criacao'])); ?></small>
+                                        <small
+                                            class="text-muted"><?php echo date('d/m/Y', strtotime($produto['data_criacao'])); ?></small>
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div class="card-footer">
                                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                    <a href="editar_produto.php?id=<?php echo intval($produto['id']); ?>" class="btn btn-outline-success btn-sm me-md-1">
+                                    <a href="editar_produto.php?id=<?php echo intval($produto['id']); ?>"
+                                        class="btn btn-outline-success btn-sm me-md-1">
                                         <i class="bi bi-pencil"></i> Editar
                                     </a>
-                                    <a href="excluir_produto.php?id=<?php echo intval($produto['id']); ?>" 
-                                       class="btn btn-outline-danger btn-sm" 
-                                       onclick="return confirmarExclusao(<?php echo intval($produto['id']); ?>, '<?php echo htmlspecialchars(addslashes($produto['nome'])); ?>')">
+                                    <a href="excluir_produto.php?id=<?php echo intval($produto['id']); ?>"
+                                        class="btn btn-outline-danger btn-sm"
+                                        onclick="return confirmarExclusao(<?php echo intval($produto['id']); ?>, '<?php echo htmlspecialchars(addslashes($produto['nome'])); ?>')">
                                         <i class="bi bi-trash"></i> Excluir
                                     </a>
                                 </div>
@@ -239,8 +448,7 @@ try {
                     </div>
                 <?php endforeach; ?>
             </div>
-            
-            <!-- Estatísticas -->
+
             <div class="card mt-4">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Estatísticas dos Meus Produtos</h5>
@@ -253,7 +461,7 @@ try {
                         </div>
                         <div class="col-md-3 mb-3">
                             <div class="display-6 text-success">
-                                <?php echo array_reduce($produtos, function($carry, $produto) {
+                                <?php echo array_reduce($produtos, function ($carry, $produto) {
                                     return $carry + $produto['quantidade_estoque'];
                                 }, 0); ?>
                             </div>
@@ -261,7 +469,7 @@ try {
                         </div>
                         <div class="col-md-3 mb-3">
                             <div class="display-6 text-success">
-                                <?php echo count(array_filter($produtos, function($produto) {
+                                <?php echo count(array_filter($produtos, function ($produto) {
                                     return $produto['disponivel'] == 1;
                                 })); ?>
                             </div>
@@ -269,7 +477,7 @@ try {
                         </div>
                         <div class="col-md-3 mb-3">
                             <div class="display-6 text-success">
-                                R$ <?php echo number_format(array_reduce($produtos, function($carry, $produto) {
+                                R$ <?php echo number_format(array_reduce($produtos, function ($carry, $produto) {
                                     return $carry + ($produto['preco'] * $produto['quantidade_estoque']);
                                 }, 0), 2, ',', '.'); ?>
                             </div>
@@ -280,16 +488,15 @@ try {
             </div>
         <?php endif; ?>
     </div>
-    
+
     <?php include 'includes/_footer.php'; ?>
-    
+
     <script>
         function confirmarExclusao(id, nome) {
             return confirm(`Tem certeza que deseja excluir o produto "${nome}"?\n\nEsta ação não pode ser desfeita.`);
         }
-        
-        // Inicializar tooltips
-        document.addEventListener('DOMContentLoaded', function() {
+
+        document.addEventListener('DOMContentLoaded', function () {
             const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
@@ -301,4 +508,5 @@ try {
         new window.VLibras.Widget('https://vlibras.gov.br/app');
     </script>
 </body>
+
 </html>

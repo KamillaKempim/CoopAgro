@@ -5,20 +5,18 @@ checkAuth();
 
 $usuario_id = intval($_SESSION['user_id']);
 
-// Verifica se o usuário é produtor
 try {
     $conn = getDBConnection();
     $stmt = $conn->prepare("SELECT tipo_usuario, nome FROM usuarios WHERE id = ?");
     $stmt->execute([$usuario_id]);
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     if ($usuario['tipo_usuario'] !== 'Produtor') {
         $_SESSION['error'] = 'Acesso restrito a produtores.';
         header("Location: perfil.php");
         exit();
     }
-    
-    // Busca as propostas do usuário
+
     $stmtPropostas = $conn->prepare("
         SELECT 
             pp.*,
@@ -38,14 +36,15 @@ try {
     ");
     $stmtPropostas->execute([$usuario_id]);
     $propostas = $stmtPropostas->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Estatísticas
     $totalPropostas = count($propostas);
-    $pendentes = array_filter($propostas, function($p) { return $p['status'] === 'pendente'; });
-    $aprovadas = array_filter($propostas, function($p) { return $p['status'] === 'aprovado'; });
-    $rejeitadas = array_filter($propostas, function($p) { return $p['status'] === 'rejeitado'; });
-    
-} catch(PDOException $e) {
+    $pendentes = array_filter($propostas, function ($p) {
+        return $p['status'] === 'pendente'; });
+    $aprovadas = array_filter($propostas, function ($p) {
+        return $p['status'] === 'aprovado'; });
+    $rejeitadas = array_filter($propostas, function ($p) {
+        return $p['status'] === 'rejeitado'; });
+
+} catch (PDOException $e) {
     $error = "Erro ao carregar propostas: " . htmlspecialchars($e->getMessage());
     error_log("Erro minhas_propostas.php - Usuário: $usuario_id - Erro: " . $e->getMessage());
 }
@@ -53,6 +52,7 @@ try {
 
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -66,74 +66,74 @@ try {
             --verde-claro: #a5d6a7;
             --verde-escuro: #1b5e20;
         }
-        
+
         .hero-section {
             background: linear-gradient(135deg, var(--verde-principal) 0%, var(--verde-secundario) 100%);
             color: white;
             padding: 40px 0;
             margin-bottom: 30px;
         }
-        
+
         .stat-card {
             border: none;
             border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease;
             height: 100%;
         }
-        
+
         .stat-card:hover {
             transform: translateY(-5px);
         }
-        
+
         .stat-icon {
             font-size: 2.5rem;
             margin-bottom: 15px;
         }
-        
+
         .stat-number {
             font-size: 2rem;
             font-weight: bold;
         }
-        
+
         .proposta-card {
             border: none;
             border-radius: 15px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
             margin-bottom: 20px;
             overflow: hidden;
         }
-        
+
         .proposta-card:hover {
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
         }
-        
+
         .status-badge {
             padding: 8px 16px;
             border-radius: 20px;
             font-size: 0.9rem;
             font-weight: 600;
         }
-        
-        .badge-pendente { 
-            background-color: #fff3cd; 
+
+        .badge-pendente {
+            background-color: #fff3cd;
             color: #856404;
             border: 1px solid #ffeaa7;
         }
-        
-        .badge-aprovado { 
-            background-color: #d1edff; 
+
+        .badge-aprovado {
+            background-color: #d1edff;
             color: #0c5460;
             border: 1px solid #b8daff;
         }
-        
-        .badge-rejeitado { 
-            background-color: #f8d7da; 
+
+        .badge-rejeitado {
+            background-color: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
-        
+
         .btn-nova-proposta {
             background: linear-gradient(135deg, var(--verde-principal) 0%, var(--verde-secundario) 100%);
             color: white;
@@ -143,19 +143,19 @@ try {
             font-weight: 600;
             transition: all 0.3s ease;
         }
-        
+
         .btn-nova-proposta:hover {
             background: linear-gradient(135deg, var(--verde-escuro) 0%, var(--verde-principal) 100%);
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(46, 125, 50, 0.4);
             color: white;
         }
-        
+
         .empty-state {
             text-align: center;
             padding: 60px 20px;
         }
-        
+
         .proposta-image {
             width: 100px;
             height: 100px;
@@ -163,12 +163,12 @@ try {
             border-radius: 10px;
             border: 2px solid #dee2e6;
         }
-        
+
         .proposta-image-container {
             position: relative;
             display: inline-block;
         }
-        
+
         .info-badge {
             background-color: var(--verde-claro);
             color: var(--verde-escuro);
@@ -176,7 +176,7 @@ try {
             border-radius: 6px;
             font-size: 0.8rem;
         }
-        
+
         .section-title {
             color: var(--verde-principal);
             border-bottom: 2px solid var(--verde-claro);
@@ -184,13 +184,13 @@ try {
             margin-bottom: 20px;
             font-weight: 600;
         }
-        
+
         .unidade-badge {
             background-color: #6c757d;
             color: white;
             font-size: 0.75rem;
         }
-        
+
         .imagem-error {
             position: absolute;
             top: 50%;
@@ -201,18 +201,224 @@ try {
             text-align: center;
             width: 90px;
         }
+
+        /* Botão de acessibilidade */
+        .painel-flutuante {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        #btnAbrir {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background-color: #0c7534;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s;
+        }
+
+        #btnAbrir:hover {
+            background-color: #0b7d44;
+        }
+
+
+        .painel-acessibilidade {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 10px;
+            background: #ffffff;
+            color: rgb(11, 66, 5);
+            padding: 12px 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+
+        .painel-acessibilidade button {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s;
+            background-color: #f0f0f0;
+        }
+
+        .painel-acessibilidade button:hover {
+            background-color: #d4d4d4;
+        }
+
+
+        .modo-contraste,
+        .modo-contraste * {
+            background-color: #000 !important;
+            color: #fff !important;
+            border-color: #fff !important;
+        }
+
+        .modo-contraste a {
+            color: #FFD700 !important;
+            text-decoration: underline;
+        }
+
+        .modo-contraste img {
+            filter: brightness(0.8) !important;
+        }
+
+        .modo-contraste,
+        .modo-contraste * {
+            background-color: #000 !important;
+            color: #fff !important;
+            border-color: #fff !important;
+            fill: #fff !important;
+            stroke: #fff !important;
+        }
+
+        .modo-contraste a,
+        .modo-contraste a * {
+            color: #FFD700 !important;
+            text-decoration: underline !important;
+        }
+
+        .modo-contraste * {
+            background-image: none !important;
+        }
+
+        .modo-contraste img,
+        .modo-contraste [style*="background-image"] {
+            filter: grayscale(1) brightness(0.4) !important;
+        }
+
+        .modo-contraste .card,
+        .modo-contraste .container,
+        .modo-contraste section,
+        .modo-contraste .row,
+        .modo-contraste .col,
+        .modo-contraste footer,
+        .modo-contraste header,
+        .modo-contraste nav {
+            background-color: #000 !important;
+            color: #fff !important;
+        }
+
+        .modo-contraste button,
+        .modo-contraste .btn {
+            background-color: #222 !important;
+            color: #fff !important;
+            border: 1px solid #fff !important;
+        }
+
+        .modo-contraste .bi,
+        .modo-contraste i {
+            color: #fff !important;
+        }
+
+        .modo-contraste .carousel-item,
+        .modo-contraste .carousel-caption {
+            background-color: #000 !important;
+        }
+
+        @media (max-width: 768px) {
+            .container img {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .texto {
+                width: 100% !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero {
+                height: auto;
+            }
+
+            .hero-img {
+                width: 100%;
+                height: auto;
+                object-fit: contain;
+            }
+        }
+
+        .modo-contraste img,
+        .modo-contraste [style*="background-image"] {
+            filter: grayscale(0.2) brightness(0.8) !important;
+        }
     </style>
 </head>
+
 <body>
     <!-- VLibras -->
     <div vw class="enabled">
         <div vw-access-button class="active"></div>
         <div vw-plugin-wrapper></div>
     </div>
+    <!-- Painel acessibilidade -->
+    <div class="painel-flutuante">
+        <button id="btnAbrir">⚙️</button>
+        <div class="painel-acessibilidade" id="painelAcessibilidade">
+            <h4>Painel de Acessibilidade</h4>
+            <button onclick="contraste()"><i class="bi bi-brightness-high-fill"> </i>Alto contraste</button>
+            <button onclick="fonteMais()"><i class="bi bi-type-bold"></i></button>
+            <button onclick="fonteMenos()"><i class="bi bi-type"></i></button>
+            <button onclick="resetar()"><i class="bi bi-arrow-counterclockwise"></i> Padrão</button>
+        </div>
+    </div>
+
+
+    <script>
+        let tamanho = localStorage.getItem("fonte") || 16;
+        document.body.style.fontSize = tamanho + "px";
+
+        if (localStorage.getItem("contraste") === "ativo") {
+            document.body.classList.add("modo-contraste");
+        }
+
+        function contraste() {
+            document.body.classList.toggle("modo-contraste");
+            let ativo = document.body.classList.contains("modo-contraste");
+            localStorage.setItem("contraste", ativo ? "ativo" : "inativo");
+        }
+
+        function fonteMais() {
+            tamanho = parseInt(tamanho) + 2;
+            document.body.style.fontSize = tamanho + "px";
+            localStorage.setItem("fonte", tamanho);
+        }
+
+        function fonteMenos() {
+            tamanho = parseInt(tamanho) - 2;
+            document.body.style.fontSize = tamanho + "px";
+            localStorage.setItem("fonte", tamanho);
+        }
+
+        function resetar() {
+            document.body.classList.remove("modo-contraste");
+            document.body.style.fontSize = "16px";
+            localStorage.clear();
+        }
+
+        const btnAbrir = document.getElementById('btnAbrir');
+        const painel = document.getElementById('painelAcessibilidade');
+
+        btnAbrir.addEventListener('click', () => {
+            painel.style.display = painel.style.display === 'flex' ? 'none' : 'flex';
+        });
+    </script>
+
 
     <?php include 'includes/_menu.php'; ?>
 
-    <!-- Hero Section -->
     <section class="hero-section">
         <div class="container">
             <div class="row align-items-center">
@@ -230,22 +436,21 @@ try {
     </section>
 
     <div class="container">
-        <?php 
+        <?php
         if (isset($_SESSION['error'])) {
             echo '<div class="alert alert-danger">' . htmlspecialchars($_SESSION['error']) . '</div>';
             unset($_SESSION['error']);
         }
-        
+
         if (isset($_SESSION['success'])) {
             echo '<div class="alert alert-success">' . htmlspecialchars($_SESSION['success']) . '</div>';
             unset($_SESSION['success']);
         }
-        
+
         if (isset($error)): ?>
             <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <!-- Estatísticas -->
         <div class="row mb-5">
             <div class="col-md-3 mb-4">
                 <div class="card stat-card text-center p-4">
@@ -277,7 +482,6 @@ try {
             </div>
         </div>
 
-        <!-- Cabeçalho com Botão -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 class="section-title mb-0">Minhas Propostas de Produtos</h3>
             <a href="propor_produto.php" class="btn btn-nova-proposta">
@@ -285,7 +489,6 @@ try {
             </a>
         </div>
 
-        <!-- Lista de Propostas -->
         <?php if (empty($propostas)): ?>
             <div class="card">
                 <div class="empty-state">
@@ -299,39 +502,35 @@ try {
             </div>
         <?php else: ?>
             <div class="row">
-                <?php foreach ($propostas as $proposta): 
+                <?php foreach ($propostas as $proposta):
                     $unidade_texto = htmlspecialchars($proposta['unidade_medida'] ?? 'KG');
-                    
-                    // DEBUG: Verificar informações da imagem
-                    // echo "<!-- DEBUG: imagem_url = " . htmlspecialchars($proposta['imagem_url']) . " -->";
-                ?>
+
+                    ?>
                     <div class="col-lg-6 mb-4">
                         <div class="card proposta-card">
                             <div class="card-body">
                                 <div class="row">
                                     <div class="col-md-4 mb-3 mb-md-0">
                                         <div class="proposta-image-container">
-                                            <?php 
-                                            // Verificar se a imagem existe
+                                            <?php
                                             $imagemPath = 'uploads/produtos/' . htmlspecialchars($proposta['imagem_url'] ?? '');
                                             $imagemSrc = '';
                                             $imagemExiste = false;
-                                            
+
                                             if (!empty($proposta['imagem_url']) && file_exists($imagemPath)) {
                                                 $imagemExiste = true;
                                                 $imagemSrc = htmlspecialchars($imagemPath);
                                             } else {
-                                                // Se a imagem não existe, usar placeholder
                                                 $imagemSrc = 'https://via.placeholder.com/150x150/CCCCCC/969696?text=Sem+Imagem';
                                             }
                                             ?>
-                                            
-                                            <img src="<?php echo $imagemSrc; ?>" 
-                                                 alt="<?php echo htmlspecialchars($proposta['nome']); ?>"
-                                                 class="proposta-image w-100"
-                                                 data-original="<?php echo htmlspecialchars($proposta['imagem_url'] ?? ''); ?>"
-                                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/150x150/CCCCCC/969696?text=Imagem+Não+Encontrada';">
-                                                 
+
+                                            <img src="<?php echo $imagemSrc; ?>"
+                                                alt="<?php echo htmlspecialchars($proposta['nome']); ?>"
+                                                class="proposta-image w-100"
+                                                data-original="<?php echo htmlspecialchars($proposta['imagem_url'] ?? ''); ?>"
+                                                onerror="this.onerror=null; this.src='https://via.placeholder.com/150x150/CCCCCC/969696?text=Imagem+Não+Encontrada';">
+
                                             <?php if (!$imagemExiste && !empty($proposta['imagem_url'])): ?>
                                                 <div class="imagem-error">
                                                     <i class="bi bi-exclamation-triangle"></i>
@@ -344,8 +543,9 @@ try {
                                     <div class="col-md-8">
                                         <div class="d-flex justify-content-between align-items-start mb-2">
                                             <h5 class="card-title mb-0"><?php echo htmlspecialchars($proposta['nome']); ?></h5>
-                                            <span class="status-badge badge-<?php echo htmlspecialchars($proposta['status']); ?>">
-                                                <?php 
+                                            <span
+                                                class="status-badge badge-<?php echo htmlspecialchars($proposta['status']); ?>">
+                                                <?php
                                                 $statusText = [
                                                     'pendente' => 'Aguardando Análise',
                                                     'aprovado' => 'Aprovado',
@@ -355,71 +555,75 @@ try {
                                                 ?>
                                             </span>
                                         </div>
-                                        
+
                                         <p class="card-text text-muted small mb-2">
                                             <?php echo htmlspecialchars($proposta['descricao']); ?>
                                         </p>
-                                        
+
                                         <div class="row g-2 mb-3">
                                             <div class="col-6">
                                                 <span class="info-badge">
-                                                    <i class="bi bi-tag"></i> 
+                                                    <i class="bi bi-tag"></i>
                                                     <?php echo htmlspecialchars($proposta['tipo']); ?>
                                                 </span>
                                             </div>
                                             <div class="col-6">
                                                 <span class="badge unidade-badge">
-                                                    <i class="bi bi-rulers"></i> 
+                                                    <i class="bi bi-rulers"></i>
                                                     <?php echo $unidade_texto; ?>
                                                 </span>
                                             </div>
                                             <div class="col-6">
                                                 <span class="info-badge">
-                                                    <i class="bi bi-box-seam"></i> 
-                                                    <?php echo $proposta['quantidade_disponivel']; ?> <?php echo $unidade_texto; ?>
+                                                    <i class="bi bi-box-seam"></i>
+                                                    <?php echo $proposta['quantidade_disponivel']; ?>
+                                                    <?php echo $unidade_texto; ?>
                                                 </span>
                                             </div>
                                             <div class="col-6">
                                                 <span class="info-badge">
-                                                    <i class="bi bi-currency-dollar"></i> 
-                                                    R$ <?php echo number_format($proposta['preco_sugerido'], 2, ',', '.'); ?>/<?php echo $unidade_texto; ?>
+                                                    <i class="bi bi-currency-dollar"></i>
+                                                    R$
+                                                    <?php echo number_format($proposta['preco_sugerido'], 2, ',', '.'); ?>/<?php echo $unidade_texto; ?>
                                                 </span>
                                             </div>
                                         </div>
-                                        
+
                                         <div class="d-flex justify-content-between align-items-center">
                                             <small class="text-muted">
-                                                <i class="bi bi-calendar"></i> 
+                                                <i class="bi bi-calendar"></i>
                                                 Enviada em <?php echo htmlspecialchars($proposta['data_formatada']); ?>
                                             </small>
-                                            
+
                                             <?php if ($proposta['status'] !== 'pendente' && !empty($proposta['data_avaliacao_formatada'])): ?>
                                                 <small class="text-muted">
-                                                    <i class="bi bi-clock"></i> 
-                                                    Avaliada em <?php echo htmlspecialchars($proposta['data_avaliacao_formatada']); ?>
+                                                    <i class="bi bi-clock"></i>
+                                                    Avaliada em
+                                                    <?php echo htmlspecialchars($proposta['data_avaliacao_formatada']); ?>
                                                     <?php if (!empty($proposta['avaliador_nome'])): ?>
                                                         <br>
-                                                        <i class="bi bi-person"></i> 
+                                                        <i class="bi bi-person"></i>
                                                         Por: <?php echo htmlspecialchars($proposta['avaliador_nome']); ?>
                                                     <?php endif; ?>
                                                 </small>
                                             <?php endif; ?>
                                         </div>
-                                        
+
                                         <?php if (!empty($proposta['observacoes'])): ?>
                                             <div class="mt-3 p-2 bg-light rounded">
                                                 <small class="text-muted">
-                                                    <strong>Observações da avaliação:</strong> 
+                                                    <strong>Observações da avaliação:</strong>
                                                     <?php echo htmlspecialchars($proposta['observacoes']); ?>
                                                 </small>
                                             </div>
                                         <?php endif; ?>
-                                        
+
                                         <?php if ($proposta['status'] === 'aprovado'): ?>
                                             <div class="mt-3 p-2 bg-success bg-opacity-10 rounded border border-success">
                                                 <small class="text-success">
-                                                    <i class="bi bi-check-circle"></i> 
-                                                    <strong>Esta proposta foi aprovada!</strong> O produto já está disponível no catálogo.
+                                                    <i class="bi bi-check-circle"></i>
+                                                    <strong>Esta proposta foi aprovada!</strong> O produto já está disponível no
+                                                    catálogo.
                                                 </small>
                                             </div>
                                         <?php endif; ?>
@@ -432,7 +636,6 @@ try {
             </div>
         <?php endif; ?>
 
-        <!-- Informações Adicionais -->
         <div class="row mt-5">
             <div class="col-12">
                 <div class="card border-0 bg-light">
@@ -468,38 +671,34 @@ try {
 
     <?php include 'includes/_footer.php'; ?>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Animação para os cards de estatísticas
+        document.addEventListener('DOMContentLoaded', function () {
             const statCards = document.querySelectorAll('.stat-card');
             statCards.forEach((card, index) => {
                 card.style.opacity = '0';
                 card.style.transform = 'translateY(20px)';
-                
+
                 setTimeout(() => {
                     card.style.transition = 'all 0.6s ease';
                     card.style.opacity = '1';
                     card.style.transform = 'translateY(0)';
                 }, index * 200);
             });
-            
-            // Animação para os cards de propostas
+
             const propostaCards = document.querySelectorAll('.proposta-card');
             propostaCards.forEach((card, index) => {
                 card.style.opacity = '0';
                 card.style.transform = 'translateX(-20px)';
-                
+
                 setTimeout(() => {
                     card.style.transition = 'all 0.6s ease';
                     card.style.opacity = '1';
                     card.style.transform = 'translateX(0)';
                 }, index * 100 + 400);
             });
-            
-            // Debug: Verificar informações das imagens
+
             const imagens = document.querySelectorAll('.proposta-image');
             imagens.forEach(img => {
                 const original = img.getAttribute('data-original');
@@ -512,4 +711,5 @@ try {
         new window.VLibras.Widget('https://vlibras.gov.br/app');
     </script>
 </body>
+
 </html>

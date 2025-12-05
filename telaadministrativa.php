@@ -6,6 +6,7 @@ checkAuth();
 
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,35 +19,220 @@ checkAuth();
             object-fit: cover;
             width: 100%;
         }
+
         .card {
             transition: transform 0.2s ease;
         }
+
         .card:hover {
             transform: translateY(-5px);
         }
+
         .tipo-badge {
             position: absolute;
             top: 10px;
             right: 10px;
         }
+
         .estoque-baixo {
             border-left: 4px solid #dc3545;
         }
+
         .estoque-normal {
             border-left: 4px solid #198754;
         }
+
+        /* Botão de acessibilidade */
+        .painel-flutuante {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        #btnAbrir {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background-color: #0c7534;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s;
+        }
+
+        #btnAbrir:hover {
+            background-color: #0b7d44;
+        }
+
+        .painel-acessibilidade {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 10px;
+            background: #ffffff;
+            color: rgb(11, 66, 5);
+            padding: 12px 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+
+        .painel-acessibilidade button {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s;
+            background-color: #f0f0f0;
+        }
+
+        .painel-acessibilidade button:hover {
+            background-color: #d4d4d4;
+        }
+
+        .modo-contraste,
+        .modo-contraste * {
+            background-color: #000 !important;
+            color: #fff !important;
+            border-color: #fff !important;
+        }
+
+        .modo-contraste a {
+            color: #FFD700 !important;
+            text-decoration: underline;
+        }
+
+        .modo-contraste img {
+            filter: brightness(0.8) !important;
+        }
+
+        .modo-contraste,
+        .modo-contraste * {
+            background-color: #000 !important;
+            color: #fff !important;
+            border-color: #fff !important;
+            fill: #fff !important;
+            stroke: #fff !important;
+        }
+
+        .modo-contraste a,
+        .modo-contraste a * {
+            color: #FFD700 !important;
+            text-decoration: underline !important;
+        }
+
+        .modo-contraste * {
+            background-image: none !important;
+        }
+
+        .modo-contraste img,
+        .modo-contraste [style*="background-image"] {
+            filter: grayscale(1) brightness(0.4) !important;
+        }
+
+        .modo-contraste .card,
+        .modo-contraste .container,
+        .modo-contraste section,
+        .modo-contraste .row,
+        .modo-contraste .col,
+        .modo-contraste footer,
+        .modo-contraste header,
+        .modo-contraste nav {
+            background-color: #000 !important;
+            color: #fff !important;
+        }
+
+        .modo-contraste button,
+        .modo-contraste .btn {
+            background-color: #222 !important;
+            color: #fff !important;
+            border: 1px solid #fff !important;
+        }
+
+        .modo-contraste .bi,
+        .modo-contraste i {
+            color: #fff !important;
+        }
+
+        .modo-contraste .carousel-item,
+        .modo-contraste .carousel-caption {
+            background-color: #000 !important;
+        }
+
+        .modo-contraste img,
+        .modo-contraste [style*="background-image"] {
+            filter: grayscale(0.2) brightness(0.8) !important;
+        }
     </style>
 </head>
+
 <body>
 
-     <!-- VLibras -->
-  <div vw class="enabled">
-    <div vw-access-button class="active"></div>
-    <div vw-plugin-wrapper></div>
-  </div>
+    <!-- VLibras -->
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper></div>
+    </div>
+
+    <!-- Painel acessibilidade -->
+    <div class="painel-flutuante">
+        <button id="btnAbrir">⚙️</button>
+        <div class="painel-acessibilidade" id="painelAcessibilidade">
+            <h4>Painel de Acessibilidade</h4>
+            <button onclick="contraste()"><i class="bi bi-brightness-high-fill"> </i>Alto contraste</button>
+            <button onclick="fonteMais()"><i class="bi bi-type-bold"></i></button>
+            <button onclick="fonteMenos()"><i class="bi bi-type"></i></button>
+            <button onclick="resetar()"><i class="bi bi-arrow-counterclockwise"></i> Padrão</button>
+        </div>
+    </div>
+
+    <script>
+        let tamanho = localStorage.getItem("fonte") || 16;
+        document.body.style.fontSize = tamanho + "px";
+
+        if (localStorage.getItem("contraste") === "ativo") {
+            document.body.classList.add("modo-contraste");
+        }
+
+        function contraste() {
+            document.body.classList.toggle("modo-contraste");
+            let ativo = document.body.classList.contains("modo-contraste");
+            localStorage.setItem("contraste", ativo ? "ativo" : "inativo");
+        }
+
+        function fonteMais() {
+            tamanho = parseInt(tamanho) + 2;
+            document.body.style.fontSize = tamanho + "px";
+            localStorage.setItem("fonte", tamanho);
+        }
+
+        function fonteMenos() {
+            tamanho = parseInt(tamanho) - 2;
+            document.body.style.fontSize = tamanho + "px";
+            localStorage.setItem("fonte", tamanho);
+        }
+
+        function resetar() {
+            document.body.classList.remove("modo-contraste");
+            document.body.style.fontSize = "16px";
+            localStorage.clear();
+        }
+
+        const btnAbrir = document.getElementById('btnAbrir');
+        const painel = document.getElementById('painelAcessibilidade');
+
+        btnAbrir.addEventListener('click', () => {
+            painel.style.display = painel.style.display === 'flex' ? 'none' : 'flex';
+        });
+    </script>
 
     <?php include 'includes/_menu.php'; ?>
-    
+
     <div class="container mt-4">
         <div class="row">
             <div class="col-md-12">
@@ -77,21 +263,21 @@ checkAuth();
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 <?php endif; ?>
-                
+
                 <div class="row">
                     <?php
                     try {
                         $conn = getDBConnection();
                         $stmt = $conn->prepare("SELECT * FROM produtos WHERE disponivel = 1 ORDER BY nome");
                         $stmt->execute();
-                        
+
                         if ($stmt->rowCount() > 0) {
-                            while($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                                 $estoqueClasse = $row['quantidade_estoque'] <= 5 ? 'estoque-baixo' : 'estoque-normal';
-                                $imagemSrc = !empty($row['imagem_url']) ? 
-                                    'uploads/produtos/' . htmlspecialchars($row['imagem_url']) : 
+                                $imagemSrc = !empty($row['imagem_url']) ?
+                                    'uploads/produtos/' . htmlspecialchars($row['imagem_url']) :
                                     'https://via.placeholder.com/300x200/CCCCCC/969696?text=Sem+Imagem';
-                                
+
                                 echo '<div class="col-md-4 mb-4">';
                                 echo '  <div class="card h-100 ' . $estoqueClasse . '">';
                                 echo '    <div class="position-relative">';
@@ -139,7 +325,7 @@ checkAuth();
                             echo '  </div>';
                             echo '</div>';
                         }
-                    } catch(PDOException $e) {
+                    } catch (PDOException $e) {
                         echo '<div class="col-12">';
                         echo '  <div class="alert alert-danger">';
                         echo '    <h5>Erro ao carregar produtos</h5>';
@@ -152,18 +338,14 @@ checkAuth();
             </div>
         </div>
     </div>
-    
+
     <?php include 'includes/_footer.php'; ?>
 
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <script>
-        // Auto-dismiss alerts after 5 seconds
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const alerts = document.querySelectorAll('.alert');
             alerts.forEach(alert => {
                 setTimeout(() => {
@@ -174,8 +356,9 @@ checkAuth();
         });
     </script>
     <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
-  <script>
-    new window.VLibras.Widget('https://vlibras.gov.br/app');
-  </script>
+    <script>
+        new window.VLibras.Widget('https://vlibras.gov.br/app');
+    </script>
 </body>
+
 </html>

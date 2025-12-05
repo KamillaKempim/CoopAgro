@@ -6,31 +6,25 @@ checkAuth();
 try {
     $conn = getDBConnection();
     $usuario_id = intval($_SESSION['user_id']);
-    
-    // Processar confirmação de entrega
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar_entrega'])) {
-        // Verifica token CSRF
         if (!verifyCSRFToken($_POST['csrf_token'])) {
             $_SESSION['error'] = 'Token CSRF inválido.';
             header("Location: meus_pedidos.php");
             exit();
         }
-        
+
         $pedido_id = intval($_POST['pedido_id']);
-        
-        // Verificar se o pedido pertence ao usuário atual
         $stmt = $conn->prepare("SELECT * FROM pedidos WHERE id = ? AND usuario_id = ?");
         $stmt->execute([$pedido_id, $usuario_id]);
         $pedido = $stmt->fetch(PDO::FETCH_ASSOC);
-        
+
         if ($pedido) {
-            // Atualizar status para "entregue"
             $updateStmt = $conn->prepare("UPDATE pedidos SET status = 'entregue' WHERE id = ?");
             $updateStmt->execute([$pedido_id]);
-            
-            // Log da ação
+
             logSecurity($usuario_id, 'pedido_confirmado', "Pedido #{$pedido_id} confirmado como entregue");
-            
+
             $_SESSION['success'] = "Entrega confirmada com sucesso!";
             header("Location: meus_pedidos.php");
             exit();
@@ -38,8 +32,7 @@ try {
             $_SESSION['error'] = "Pedido não encontrado ou você não tem permissão para esta ação.";
         }
     }
-    
-    // Busca os pedidos do usuário
+
     $stmt = $conn->prepare("
         SELECT p.*, pr.nome as produto_nome, pr.imagem_url, pr.unidade_medida
         FROM pedidos p 
@@ -49,8 +42,8 @@ try {
     ");
     $stmt->execute([$usuario_id]);
     $pedidos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-} catch(PDOException $e) {
+
+} catch (PDOException $e) {
     $error = "Erro ao carregar pedidos: " . htmlspecialchars($e->getMessage());
     logSecurity($usuario_id ?? null, 'erro_pedidos', "Erro: " . $e->getMessage());
 }
@@ -58,6 +51,7 @@ try {
 
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -71,97 +65,337 @@ try {
             --verde-secundario: #4caf50;
             --verde-claro: #a5d6a7;
         }
-        
+
         .card-pedido {
             transition: transform 0.3s, box-shadow 0.3s;
             border-radius: 10px;
             overflow: hidden;
             border: 1px solid #dee2e6;
         }
+
         .card-pedido:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
         }
+
         .status-badge {
             font-size: 0.85rem;
             padding: 0.5em 1em;
         }
+
         .product-image {
             height: 150px;
             object-fit: cover;
             width: 100%;
         }
+
         .btn-confirmar {
             transition: all 0.3s;
             background-color: var(--verde-principal);
             border-color: var(--verde-principal);
         }
+
         .btn-confirmar:hover {
             transform: scale(1.05);
             background-color: var(--verde-secundario);
             border-color: var(--verde-secundario);
         }
+
         .empty-state {
             padding: 3rem 1rem;
         }
+
         .card-header-custom {
             background: linear-gradient(135deg, var(--verde-principal), var(--verde-secundario));
             color: white;
             font-weight: 600;
         }
+
         .badge-status {
             font-size: 0.75rem;
             padding: 0.4em 0.8em;
         }
-        .badge-pendente { background-color: #ffc107; color: #000; }
-        .badge-confirmado { background-color: #17a2b8; color: #fff; }
-        .badge-preparando { background-color: #fd7e14; color: #fff; }
-        .badge-enviado { background-color: #0dcaf0; color: #000; }
-        .badge-entregue { background-color: var(--verde-principal); color: #fff; }
-        .badge-cancelado { background-color: #dc3545; color: #fff; }
-        
+
+        .badge-pendente {
+            background-color: #ffc107;
+            color: #000;
+        }
+
+        .badge-confirmado {
+            background-color: #17a2b8;
+            color: #fff;
+        }
+
+        .badge-preparando {
+            background-color: #fd7e14;
+            color: #fff;
+        }
+
+        .badge-enviado {
+            background-color: #0dcaf0;
+            color: #000;
+        }
+
+        .badge-entregue {
+            background-color: var(--verde-principal);
+            color: #fff;
+        }
+
+        .badge-cancelado {
+            background-color: #dc3545;
+            color: #fff;
+        }
+
         .unidade-info {
             font-size: 0.85rem;
             color: #666;
         }
-        
+
         @media (max-width: 576px) {
             .card-body {
                 padding: 1rem;
             }
+
             .btn-confirmar {
                 width: 100%;
                 margin-top: 0.5rem;
             }
         }
+
+        /* Botão de acessibilidade */
+        .painel-flutuante {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        #btnAbrir {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background-color: #0c7534;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s;
+        }
+
+        #btnAbrir:hover {
+            background-color: #0b7d44;
+        }
+
+
+        .painel-acessibilidade {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 10px;
+            background: #ffffff;
+            color: rgb(11, 66, 5);
+            padding: 12px 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+
+        .painel-acessibilidade button {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s;
+            background-color: #f0f0f0;
+        }
+
+        .painel-acessibilidade button:hover {
+            background-color: #d4d4d4;
+        }
+
+
+        .modo-contraste,
+        .modo-contraste * {
+            background-color: #000 !important;
+            color: #fff !important;
+            border-color: #fff !important;
+        }
+
+        .modo-contraste a {
+            color: #FFD700 !important;
+            text-decoration: underline;
+        }
+
+        .modo-contraste img {
+            filter: brightness(0.8) !important;
+        }
+
+        .modo-contraste,
+        .modo-contraste * {
+            background-color: #000 !important;
+            color: #fff !important;
+            border-color: #fff !important;
+            fill: #fff !important;
+            stroke: #fff !important;
+        }
+
+        .modo-contraste a,
+        .modo-contraste a * {
+            color: #FFD700 !important;
+            text-decoration: underline !important;
+        }
+
+        .modo-contraste * {
+            background-image: none !important;
+        }
+
+        .modo-contraste img,
+        .modo-contraste [style*="background-image"] {
+            filter: grayscale(1) brightness(0.4) !important;
+        }
+
+        .modo-contraste .card,
+        .modo-contraste .container,
+        .modo-contraste section,
+        .modo-contraste .row,
+        .modo-contraste .col,
+        .modo-contraste footer,
+        .modo-contraste header,
+        .modo-contraste nav {
+            background-color: #000 !important;
+            color: #fff !important;
+        }
+
+        .modo-contraste button,
+        .modo-contraste .btn {
+            background-color: #222 !important;
+            color: #fff !important;
+            border: 1px solid #fff !important;
+        }
+
+        .modo-contraste .bi,
+        .modo-contraste i {
+            color: #fff !important;
+        }
+
+        .modo-contraste .carousel-item,
+        .modo-contraste .carousel-caption {
+            background-color: #000 !important;
+        }
+
+        @media (max-width: 768px) {
+            .container img {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .texto {
+                width: 100% !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero {
+                height: auto;
+            }
+
+            .hero-img {
+                width: 100%;
+                height: auto;
+                object-fit: contain;
+            }
+        }
+
+        .modo-contraste img,
+        .modo-contraste [style*="background-image"] {
+            filter: grayscale(0.2) brightness(0.8) !important;
+        }
     </style>
 </head>
+
 <body>
     <!-- VLibras -->
     <div vw class="enabled">
         <div vw-access-button class="active"></div>
         <div vw-plugin-wrapper></div>
     </div>
+    <!-- Painel acessibilidade -->
+    <div class="painel-flutuante">
+        <button id="btnAbrir">⚙️</button>
+        <div class="painel-acessibilidade" id="painelAcessibilidade">
+            <h4>Painel de Acessibilidade</h4>
+            <button onclick="contraste()"><i class="bi bi-brightness-high-fill"> </i>Alto contraste</button>
+            <button onclick="fonteMais()"><i class="bi bi-type-bold"></i></button>
+            <button onclick="fonteMenos()"><i class="bi bi-type"></i></button>
+            <button onclick="resetar()"><i class="bi bi-arrow-counterclockwise"></i> Padrão</button>
+        </div>
+    </div>
+
+
+    <script>
+        let tamanho = localStorage.getItem("fonte") || 16;
+        document.body.style.fontSize = tamanho + "px";
+
+        if (localStorage.getItem("contraste") === "ativo") {
+            document.body.classList.add("modo-contraste");
+        }
+
+        function contraste() {
+            document.body.classList.toggle("modo-contraste");
+            let ativo = document.body.classList.contains("modo-contraste");
+            localStorage.setItem("contraste", ativo ? "ativo" : "inativo");
+        }
+
+        function fonteMais() {
+            tamanho = parseInt(tamanho) + 2;
+            document.body.style.fontSize = tamanho + "px";
+            localStorage.setItem("fonte", tamanho);
+        }
+
+        function fonteMenos() {
+            tamanho = parseInt(tamanho) - 2;
+            document.body.style.fontSize = tamanho + "px";
+            localStorage.setItem("fonte", tamanho);
+        }
+
+        function resetar() {
+            document.body.classList.remove("modo-contraste");
+            document.body.style.fontSize = "16px";
+            localStorage.clear();
+        }
+
+        const btnAbrir = document.getElementById('btnAbrir');
+        const painel = document.getElementById('painelAcessibilidade');
+
+        btnAbrir.addEventListener('click', () => {
+            painel.style.display = painel.style.display === 'flex' ? 'none' : 'flex';
+        });
+    </script>
+
 
     <?php include 'includes/_menu.php'; ?>
-    
+
     <div class="container mt-4">
         <h2 class="mb-4 text-success">
             <i class="bi bi-bag-check"></i> Meus Pedidos
         </h2>
-        
-        <?php 
+
+        <?php
         if (isset($_SESSION['success'])) {
             echo '<div class="alert alert-success">' . htmlspecialchars($_SESSION['success']) . '</div>';
             unset($_SESSION['success']);
         }
-        
+
         if (isset($_SESSION['error'])) {
             echo '<div class="alert alert-danger">' . htmlspecialchars($_SESSION['error']) . '</div>';
             unset($_SESSION['error']);
         }
         ?>
-        
+
         <?php if (isset($error)): ?>
             <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
         <?php elseif (empty($pedidos)): ?>
@@ -175,25 +409,24 @@ try {
             </div>
         <?php else: ?>
             <div class="row">
-                <?php foreach ($pedidos as $pedido): 
-                    $imagemSrc = !empty($pedido['imagem_url']) ? 
-                        'uploads/produtos/' . htmlspecialchars($pedido['imagem_url']) : 
+                <?php foreach ($pedidos as $pedido):
+                    $imagemSrc = !empty($pedido['imagem_url']) ?
+                        'uploads/produtos/' . htmlspecialchars($pedido['imagem_url']) :
                         'https://via.placeholder.com/300x200/CCCCCC/969696?text=Sem+Imagem';
-                    
+
                     $unidade_texto = htmlspecialchars($pedido['unidade_medida'] ?? 'UN');
                     $quantidade_texto = $pedido['quantidade'] . ' ' . $unidade_texto;
-                ?>
+                    ?>
                     <div class="col-12 col-md-6 col-lg-4 mb-4">
                         <div class="card card-pedido h-100">
-                            <img src="<?php echo htmlspecialchars($imagemSrc); ?>" 
-                                 class="product-image" 
-                                 alt="<?php echo htmlspecialchars($pedido['produto_nome']); ?>"
-                                 onerror="this.src='https://via.placeholder.com/300x200/CCCCCC/969696?text=Imagem+Não+Encontrada'">
-                            
+                            <img src="<?php echo htmlspecialchars($imagemSrc); ?>" class="product-image"
+                                alt="<?php echo htmlspecialchars($pedido['produto_nome']); ?>"
+                                onerror="this.src='https://via.placeholder.com/300x200/CCCCCC/969696?text=Imagem+Não+Encontrada'">
+
                             <div class="card-header card-header-custom">
                                 <h5 class="card-title mb-0"><?php echo htmlspecialchars($pedido['produto_nome']); ?></h5>
                             </div>
-                            
+
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <span class="text-muted">Status:</span>
@@ -201,32 +434,35 @@ try {
                                         <?php echo htmlspecialchars(ucfirst($pedido['status'])); ?>
                                     </span>
                                 </div>
-                                
+
                                 <div class="d-flex justify-content-between mb-2">
                                     <span class="text-muted">Quantidade:</span>
                                     <strong><?php echo $quantidade_texto; ?></strong>
                                 </div>
-                                
+
                                 <div class="d-flex justify-content-between mb-2">
                                     <span class="text-muted">Preço unitário:</span>
-                                    <strong>R$ <?php echo number_format($pedido['preco_unitario'], 2, ',', '.'); ?> /<?php echo $unidade_texto; ?></strong>
+                                    <strong>R$ <?php echo number_format($pedido['preco_unitario'], 2, ',', '.'); ?>
+                                        /<?php echo $unidade_texto; ?></strong>
                                 </div>
-                                
+
                                 <div class="d-flex justify-content-between mb-2">
                                     <span class="text-muted">Total:</span>
-                                    <strong class="text-success">R$ <?php echo number_format($pedido['total'], 2, ',', '.'); ?></strong>
+                                    <strong class="text-success">R$
+                                        <?php echo number_format($pedido['total'], 2, ',', '.'); ?></strong>
                                 </div>
-                                
+
                                 <div class="d-flex justify-content-between mb-3">
                                     <span class="text-muted">Data:</span>
                                     <small><?php echo date('d/m/Y H:i', strtotime($pedido['data_pedido'])); ?></small>
                                 </div>
-                                
+
                                 <div class="mb-3">
                                     <small class="text-muted d-block mb-1"><strong>Endereço de entrega:</strong></small>
-                                    <small class="text-muted"><?php echo htmlspecialchars($pedido['endereco_entrega']); ?></small>
+                                    <small
+                                        class="text-muted"><?php echo htmlspecialchars($pedido['endereco_entrega']); ?></small>
                                 </div>
-                                
+
                                 <?php if ($pedido['status'] != 'entregue' && $pedido['status'] != 'cancelado'): ?>
                                     <form method="POST" class="mt-2">
                                         <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
@@ -237,10 +473,11 @@ try {
                                     </form>
                                 <?php elseif ($pedido['status'] == 'entregue'): ?>
                                     <div class="alert alert-success text-center py-2 mt-2">
-                                        <i class="fas fa-check me-2"></i>Entregue em <?php echo date('d/m/Y', strtotime($pedido['data_atualizacao'])); ?>
+                                        <i class="fas fa-check me-2"></i>Entregue em
+                                        <?php echo date('d/m/Y', strtotime($pedido['data_atualizacao'])); ?>
                                     </div>
                                 <?php endif; ?>
-                                
+
                                 <?php if (!empty($pedido['observacoes'])): ?>
                                     <div class="alert alert-info mt-2 p-2 small">
                                         <strong>Observações:</strong> <?php echo htmlspecialchars($pedido['observacoes']); ?>
@@ -253,13 +490,14 @@ try {
             </div>
         <?php endif; ?>
     </div>
-    
+
     <?php include 'includes/_footer.php'; ?>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
     <script>
         new window.VLibras.Widget('https://vlibras.gov.br/app');
     </script>
 </body>
+
 </html>

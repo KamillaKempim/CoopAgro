@@ -5,7 +5,6 @@ checkAuth();
 
 $usuario_id = intval($_SESSION['user_id']);
 
-// Verifica se o usuário é produtor
 try {
     $conn = getDBConnection();
     $stmt = $conn->prepare("SELECT tipo_usuario, nome FROM usuarios WHERE id = ?");
@@ -21,12 +20,10 @@ try {
     die("Erro ao verificar tipo de usuário: " . htmlspecialchars($e->getMessage()));
 }
 
-// Configurações para upload de imagem
 $uploadDir = 'uploads/produtos/';
 $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-$maxFileSize = 5 * 1024 * 1024; // 5MB
+$maxFileSize = 5 * 1024 * 1024; 
 
-// Criar diretório de uploads se não existir
 if (!file_exists($uploadDir)) {
     mkdir($uploadDir, 0777, true);
 }
@@ -44,14 +41,12 @@ $dadosForm = [
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Verifica token CSRF
     if (!verifyCSRFToken($_POST['csrf_token'])) {
         $_SESSION['error'] = 'Token CSRF inválido.';
         header("Location: propor_produto.php");
         exit();
     }
     
-    // Coletar e sanitizar dados
     $dadosForm['nome'] = sanitizeInput($_POST['nome'] ?? '');
     $dadosForm['descricao'] = sanitizeInput($_POST['descricao'] ?? '');
     $dadosForm['tipo'] = sanitizeInput($_POST['tipo'] ?? '');
@@ -59,13 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dadosForm['quantidade_disponivel'] = intval($_POST['quantidade_disponivel'] ?? 1);
     $dadosForm['observacoes'] = sanitizeInput($_POST['observacoes'] ?? '');
     
-    // Processar preço
     $precoInput = $_POST['preco_sugerido'] ?? '';
-    // Converte vírgula para ponto para armazenamento no banco
     $precoInput = str_replace(',', '.', $precoInput);
     $dadosForm['preco_sugerido'] = floatval($precoInput);
     
-    // Validações
     if (empty($dadosForm['nome']) || strlen($dadosForm['nome']) > 255) {
         $errors[] = "Nome do produto é obrigatório e deve ter no máximo 255 caracteres.";
     }
@@ -90,16 +82,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = "Preço sugerido deve ser maior que zero.";
     }
     
-    // Processar upload da imagem
     $imagemNome = '';
     if (isset($_FILES['imagem']) && $_FILES['imagem']['error'] !== UPLOAD_ERR_NO_FILE) {
         $imagem = $_FILES['imagem'];
         
-        // Verificar se há erro no upload
         if ($imagem['error'] !== UPLOAD_ERR_OK) {
             $errors[] = "Erro no upload da imagem: " . getUploadError($imagem['error']);
         } else {
-            // Verificar tipo do arquivo
             $fileExtension = strtolower(pathinfo($imagem['name'], PATHINFO_EXTENSION));
             $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
             
@@ -107,7 +96,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = "Tipo de arquivo não permitido. Use apenas JPG, PNG, GIF ou WebP.";
             }
             
-            // Verificar MIME type
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mimeType = finfo_file($finfo, $imagem['tmp_name']);
             finfo_close($finfo);
@@ -116,23 +104,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = "Tipo MIME do arquivo não é permitido.";
             }
             
-            // Verificar tamanho do arquivo
             if ($imagem['size'] > $maxFileSize) {
                 $errors[] = "Arquivo muito grande. Tamanho máximo permitido: 5MB.";
             }
             
-            // Validar se é realmente uma imagem
             $imageInfo = getimagesize($imagem['tmp_name']);
             if (!$imageInfo) {
                 $errors[] = "O arquivo enviado não é uma imagem válida.";
             }
             
             if (empty($errors)) {
-                // Gerar nome único para o arquivo
                 $imagemNome = uniqid('produto_', true) . '_' . time() . '.' . $fileExtension;
                 $uploadPath = $uploadDir . $imagemNome;
                 
-                // Mover arquivo para o diretório de uploads
                 if (!move_uploaded_file($imagem['tmp_name'], $uploadPath)) {
                     $errors[] = "Erro ao salvar a imagem. Tente novamente.";
                 }
@@ -163,24 +147,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $dadosForm['observacoes']
             ]);
             
-            // Log da ação (simplificado - removida a função não existente)
-            // logSecurity($usuario_id, 'proposta_enviada', "Proposta '{$dadosForm['nome']}' enviada");
-            
             $success = true;
             
         } catch(PDOException $e) {
-            // Se houve erro, remove a imagem que foi salva
             if (!empty($imagemNome) && file_exists($uploadDir . $imagemNome)) {
                 unlink($uploadDir . $imagemNome);
             }
             $errors[] = "Erro ao propor produto: " . htmlspecialchars($e->getMessage());
-            // Log simplificado
             error_log("Erro ao propor produto - Usuário: $usuario_id - Erro: " . $e->getMessage());
         }
     }
 }
 
-// Função para obter mensagem de erro de upload
 function getUploadError($errorCode) {
     switch ($errorCode) {
         case UPLOAD_ERR_INI_SIZE:
@@ -317,7 +295,6 @@ function getUploadError($errorCode) {
             margin-bottom: 20px;
         }
         
-        /* Garantir que o campo de preço seja visível */
         #preco_sugerido {
             display: block !important;
             visibility: visible !important;
@@ -328,6 +305,154 @@ function getUploadError($errorCode) {
         .input-group .form-control {
             z-index: 1;
         }
+        /* Botão de acessibilidade */
+.painel-flutuante {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+
+#btnAbrir {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  background-color: #0c7534;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  transition: all 0.2s;
+}
+
+#btnAbrir:hover {
+  background-color: #0b7d44;
+}
+
+
+.painel-acessibilidade {
+  display: none; 
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  background: #ffffff;
+  color:rgb(11, 66, 5);
+  padding: 12px 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+
+.painel-acessibilidade button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: all 0.2s;
+  background-color: #f0f0f0;
+}
+
+.painel-acessibilidade button:hover {
+  background-color: #d4d4d4;
+}
+
+.modo-contraste, 
+.modo-contraste * {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+}
+
+.modo-contraste a {
+  color: #FFD700 !important;
+  text-decoration: underline;
+}
+
+.modo-contraste img {
+  filter: brightness(0.8) !important;
+}
+
+.modo-contraste, 
+.modo-contraste * {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+  fill: #fff !important;
+  stroke: #fff !important;
+}
+
+.modo-contraste a,
+.modo-contraste a * {
+  color: #FFD700 !important;
+  text-decoration: underline !important;
+}
+
+.modo-contraste * {
+  background-image: none !important;
+}
+
+.modo-contraste img,
+.modo-contraste [style*="background-image"] {
+  filter: grayscale(1) brightness(0.4) !important;
+}
+
+.modo-contraste .card,
+.modo-contraste .container,
+.modo-contraste section,
+.modo-contraste .row,
+.modo-contraste .col,
+.modo-contraste footer,
+.modo-contraste header,
+.modo-contraste nav {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+
+.modo-contraste button,
+.modo-contraste .btn {
+  background-color: #222 !important;
+  color: #fff !important;
+  border: 1px solid #fff !important;
+}
+
+.modo-contraste .bi,
+.modo-contraste i {
+  color: #fff !important;
+}
+
+.modo-contraste .carousel-item,
+.modo-contraste .carousel-caption {
+  background-color: #000 !important;
+}
+
+@media (max-width: 768px) {
+  .container img {
+    display: none !important;
+  }
+}
+@media (max-width: 768px) {
+  .texto {
+    width: 100% !important;
+  }
+}
+@media (max-width: 768px) {
+  .hero {
+    height: auto;
+  }
+
+  .hero-img {
+    width: 100%;
+    height: auto;
+    object-fit: contain; 
+  }
+}
+.modo-contraste img,
+.modo-contraste [style*="background-image"] {
+  filter: grayscale(0.2) brightness(0.8) !important; 
+}
     </style>
 </head>
 <body>
@@ -336,6 +461,59 @@ function getUploadError($errorCode) {
         <div vw-access-button class="active"></div>
         <div vw-plugin-wrapper></div>
     </div>
+
+    <!-- Painel acessibilidade -->
+<div class="painel-flutuante">
+  <button id="btnAbrir">⚙️</button>
+  <div class="painel-acessibilidade" id="painelAcessibilidade">
+    <h4>Painel de Acessibilidade</h4> 
+    <button onclick="contraste()"><i class="bi bi-brightness-high-fill">  </i>Alto contraste</button>
+    <button onclick="fonteMais()"><i class="bi bi-type-bold"></i></button>
+    <button onclick="fonteMenos()"><i class="bi bi-type"></i></button>
+    <button onclick="resetar()"><i class="bi bi-arrow-counterclockwise"></i>  Padrão</button>
+  </div>
+</div>
+
+<script>
+let tamanho = localStorage.getItem("fonte") || 16;
+document.body.style.fontSize = tamanho + "px";
+
+if(localStorage.getItem("contraste") === "ativo") {
+  document.body.classList.add("modo-contraste");
+}
+
+function contraste() {
+  document.body.classList.toggle("modo-contraste");
+  let ativo = document.body.classList.contains("modo-contraste");
+  localStorage.setItem("contraste", ativo ? "ativo" : "inativo");
+}
+
+function fonteMais() {
+  tamanho = parseInt(tamanho) + 2;
+  document.body.style.fontSize = tamanho + "px";
+  localStorage.setItem("fonte", tamanho);
+}
+
+function fonteMenos() {
+  tamanho = parseInt(tamanho) - 2;
+  document.body.style.fontSize = tamanho + "px";
+  localStorage.setItem("fonte", tamanho);
+}
+
+function resetar() {
+  document.body.classList.remove("modo-contraste");
+  document.body.style.fontSize = "16px";
+  localStorage.clear();
+}
+
+const btnAbrir = document.getElementById('btnAbrir');
+const painel = document.getElementById('painelAcessibilidade');
+
+btnAbrir.addEventListener('click', () => {
+  painel.style.display = painel.style.display === 'flex' ? 'none' : 'flex';
+});
+</script>
+
 
     <?php include 'includes/_menu.php'; ?>
 
@@ -585,7 +763,6 @@ function getUploadError($errorCode) {
 
     <?php include 'includes/_footer.php'; ?>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
@@ -599,7 +776,6 @@ function getUploadError($errorCode) {
             const quantidadeTexto = document.getElementById('quantidade-texto');
             const precoTexto = document.getElementById('preco-texto');
             
-            // Função para atualizar os textos com base na unidade selecionada
             function atualizarTextosUnidade() {
                 const unidade = unidadeSelect.value || 'unidade';
                 
@@ -616,8 +792,6 @@ function getUploadError($errorCode) {
                     precoInput.placeholder = `0,00 por ${unidade}`;
                 }
             }
-            
-            // Atualizar texto da unidade de medida quando mudar
             unidadeSelect.addEventListener('change', atualizarTextosUnidade);
             
             // Upload de imagem
@@ -629,14 +803,12 @@ function getUploadError($errorCode) {
                 if (this.files && this.files[0]) {
                     const file = this.files[0];
                     
-                    // Verificar tamanho do arquivo (5MB)
                     if (file.size > 5 * 1024 * 1024) {
                         alert('Arquivo muito grande. Tamanho máximo: 5MB.');
                         this.value = '';
                         return;
                     }
                     
-                    // Verificar extensão
                     const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
                     const fileExtension = file.name.split('.').pop().toLowerCase();
                     
@@ -646,7 +818,6 @@ function getUploadError($errorCode) {
                         return;
                     }
                     
-                    // Criar preview da imagem
                     const reader = new FileReader();
                     reader.onload = function(e) {
                         preview.src = e.target.result;

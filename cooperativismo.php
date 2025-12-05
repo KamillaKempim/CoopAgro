@@ -4,87 +4,133 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $titulo; ?></title>
-    
-    <!-- Bootstrap CSS -->
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    
-    <!-- CSS Personalizado -->
-     <link rel="stylesheet" href="css/cooperativismo.css" />
-     
+    <link rel="stylesheet" href="css/cooperativismo.css" />
+
 </head>
+
 <body>
 
-    <!-- VLibras -->
-  <div vw class="enabled">
-    <div vw-access-button class="active"></div>
-    <div vw-plugin-wrapper></div>
-  </div>
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper></div>
+    </div>
 
-    <!-- Menu -->
+    <div class="painel-flutuante">
+        <button id="btnAbrir">⚙️</button>
+        <div class="painel-acessibilidade" id="painelAcessibilidade">
+            <h4>Painel de Acessibilidade</h4>
+            <button onclick="contraste()"><i class="bi bi-brightness-high-fill"> </i>Alto contraste</button>
+            <button onclick="fonteMais()"><i class="bi bi-type-bold"></i></button>
+            <button onclick="fonteMenos()"><i class="bi bi-type"></i></button>
+            <button onclick="resetar()"><i class="bi bi-arrow-counterclockwise"></i> Padrão</button>
+        </div>
+    </div>
+
+
+    <script>
+        let tamanho = localStorage.getItem("fonte") || 16;
+        document.body.style.fontSize = tamanho + "px";
+
+        if (localStorage.getItem("contraste") === "ativo") {
+            document.body.classList.add("modo-contraste");
+        }
+
+        function contraste() {
+            document.body.classList.toggle("modo-contraste");
+            let ativo = document.body.classList.contains("modo-contraste");
+            localStorage.setItem("contraste", ativo ? "ativo" : "inativo");
+        }
+
+        function fonteMais() {
+            tamanho = parseInt(tamanho) + 2;
+            document.body.style.fontSize = tamanho + "px";
+            localStorage.setItem("fonte", tamanho);
+        }
+
+        function fonteMenos() {
+            tamanho = parseInt(tamanho) - 2;
+            document.body.style.fontSize = tamanho + "px";
+            localStorage.setItem("fonte", tamanho);
+        }
+
+        function resetar() {
+            document.body.classList.remove("modo-contraste");
+            document.body.style.fontSize = "16px";
+            localStorage.clear();
+        }
+
+        const btnAbrir = document.getElementById('btnAbrir');
+        const painel = document.getElementById('painelAcessibilidade');
+
+        btnAbrir.addEventListener('click', () => {
+            painel.style.display = painel.style.display === 'flex' ? 'none' : 'flex';
+        });
+    </script>
+
     <?php include 'includes/_segundo_menu.php'; ?>
 
-    <!-- Hero Section -->
-   <section class="hero-section">
-    <div id="carouselHero" class="carousel slide" data-bs-ride="carousel">
-        <div class="carousel-inner">
+    <section class="hero-section">
+        <div id="carouselHero" class="carousel slide" data-bs-ride="carousel">
+            <div class="carousel-inner">
 
-            <div class="carousel-item active">
-                <img src="Images/carrosselCoop.png" class="d-block w-100" style="height: 450px; object-fit: cover;">
-                <div class="carousel-caption d-none d-md-block">
-                    
+                <div class="carousel-item active">
+                    <img src="Images/carrosselCoop.png" class="d-block w-100" style="height: 450px; object-fit: cover;">
+                    <div class="carousel-caption d-none d-md-block">
+
+                    </div>
                 </div>
+
+                <div class="carousel-item">
+                    <img src="Images/carrosselCoop2.png" class="d-block w-100"
+                        style="height: 450px; object-fit: cover;">
+                    <div class="carousel-caption d-none d-md-block">
+                    </div>
+                </div>
+
             </div>
 
-            <div class="carousel-item">
-                <img src="Images/carrosselCoop2.png" class="d-block w-100" style="height: 450px; object-fit: cover;">
-                <div class="carousel-caption d-none d-md-block">
-                </div>
-            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#carouselHero" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon"></span>
+            </button>
 
+            <button class="carousel-control-next" type="button" data-bs-target="#carouselHero" data-bs-slide="next">
+                <span class="carousel-control-next-icon"></span>
+            </button>
         </div>
-
-        <button class="carousel-control-prev" type="button" data-bs-target="#carouselHero" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon"></span>
-        </button>
-
-        <button class="carousel-control-next" type="button" data-bs-target="#carouselHero" data-bs-slide="next">
-            <span class="carousel-control-next-icon"></span>
-        </button>
-    </div>
-</section>
+    </section>
 
 
-    <!-- Conteúdo Principal -->
     <div class="container" id="entenda-mais">
-        <!-- Definição -->
         <section class="mb-5">
             <div class="row align-items-center">
                 <div class="col-lg-6">
-                    <img src="https://www.gov.br/mda/pt-br/noticias/2024/10/o-brasil-que-alimenta-uma-celebracao-a-agricultura-familiar/ao-6239-1.jpg" 
-                         alt="Cooperativismo Agrícola" class="img-fluid agricultura-img">
+                    <img src="https://www.gov.br/mda/pt-br/noticias/2024/10/o-brasil-que-alimenta-uma-celebracao-a-agricultura-familiar/ao-6239-1.jpg"
+                        alt="Cooperativismo Agrícola" class="img-fluid agricultura-img">
                 </div>
                 <div class="col-lg-6">
                     <h2 class="mb-4 text-agro">Cooperativismo no Campo</h2>
                     <p class="fs-5">
-                        O cooperativismo agrícola é um sistema que une produtores rurais em torno de objetivos comuns, 
+                        O cooperativismo agrícola é um sistema que une produtores rurais em torno de objetivos comuns,
                         fortalecendo a agricultura familiar e promovendo o desenvolvimento sustentável do agronegócio.
                     </p>
                     <p>
-                        Através da união, os agricultores ganham força para negociar melhores preços, 
-                        acessar tecnologias, compartilhar conhecimentos e conquistar mercados que individualmente seriam inacessíveis.
+                        Através da união, os agricultores ganham força para negociar melhores preços,
+                        acessar tecnologias, compartilhar conhecimentos e conquistar mercados que individualmente seriam
+                        inacessíveis.
                     </p>
                     <a href="cadastro.php" class="btn btn-success">Junte se a nós</a>
                 </div>
             </div>
         </section>
 
-        <!-- Estatísticas -->
         <section class="stats-section mb-5 rounded">
             <div class="container">
                 <h2 class="text-center mb-5">O Cooperativismo Agrícola em Números</h2>
@@ -109,7 +155,6 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
             </div>
         </section>
 
-        <!-- Princípios do Cooperativismo Agrícola -->
         <section class="mb-5">
             <h2 class="text-center mb-5 text-agro">Princípios do Cooperativismo Agrícola</h2>
             <div class="row g-4">
@@ -120,7 +165,8 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
                                 <i class="bi bi-people-fill benefit-icon"></i>
                             </div>
                             <h5 class="card-title">Associação Voluntária</h5>
-                            <p class="card-text">Produtores rurais unem-se livremente para fortalecer sua atividade agrícola e melhorar suas condições de trabalho.</p>
+                            <p class="card-text">Produtores rurais unem-se livremente para fortalecer sua atividade
+                                agrícola e melhorar suas condições de trabalho.</p>
                         </div>
                     </div>
                 </div>
@@ -131,7 +177,8 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
                                 <i class="bi bi-graph-up-arrow benefit-icon"></i>
                             </div>
                             <h5 class="card-title">Gestão Democrática</h5>
-                            <p class="card-text">Cada produtor tem um voto, independente do tamanho de sua propriedade ou volume de produção.</p>
+                            <p class="card-text">Cada produtor tem um voto, independente do tamanho de sua propriedade
+                                ou volume de produção.</p>
                         </div>
                     </div>
                 </div>
@@ -142,7 +189,8 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
                                 <i class="bi bi-currency-dollar benefit-icon"></i>
                             </div>
                             <h5 class="card-title">Participação Econômica</h5>
-                            <p class="card-text">Os excedentes são reinvestidos na cooperativa ou distribuídos entre os cooperados proporcionalmente.</p>
+                            <p class="card-text">Os excedentes são reinvestidos na cooperativa ou distribuídos entre os
+                                cooperados proporcionalmente.</p>
                         </div>
                     </div>
                 </div>
@@ -153,7 +201,8 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
                                 <i class="bi bi-shield-check benefit-icon"></i>
                             </div>
                             <h5 class="card-title">Autonomia</h5>
-                            <p class="card-text">As cooperativas agrícolas são controladas por seus membros, mantendo sua independência.</p>
+                            <p class="card-text">As cooperativas agrícolas são controladas por seus membros, mantendo
+                                sua independência.</p>
                         </div>
                     </div>
                 </div>
@@ -164,7 +213,8 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
                                 <i class="bi bi-book benefit-icon"></i>
                             </div>
                             <h5 class="card-title">Educação e Formação</h5>
-                            <p class="card-text">Promoção de capacitação técnica e gerencial para os cooperados e comunidades rurais.</p>
+                            <p class="card-text">Promoção de capacitação técnica e gerencial para os cooperados e
+                                comunidades rurais.</p>
                         </div>
                     </div>
                 </div>
@@ -175,21 +225,21 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
                                 <i class="bi bi-handshake benefit-icon"></i>
                             </div>
                             <h5 class="card-title">Cooperação entre Cooperativas</h5>
-                            <p class="card-text">Trabalho em rede para fortalecer todo o setor cooperativista agrícola.</p>
+                            <p class="card-text">Trabalho em rede para fortalecer todo o setor cooperativista agrícola.
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Agricultura Familiar -->
         <section class="agricultura-familiar mb-5">
             <div class="container">
                 <div class="row align-items-center">
                     <div class="col-lg-6">
                         <h2 class="mb-4 text-agro">Agricultura Familiar e Cooperativismo</h2>
                         <p class="fs-5">
-                            O cooperativismo é fundamental para a sustentabilidade da agricultura familiar, 
+                            O cooperativismo é fundamental para a sustentabilidade da agricultura familiar,
                             permitindo que pequenos produtores acessem mercados, tecnologias e financiamentos.
                         </p>
                         <ul class="list-group list-group-flush">
@@ -212,14 +262,13 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
                         </ul>
                     </div>
                     <div class="col-lg-6">
-                        <img src="https://agro.insper.edu.br/storage/articles/March2024/aGvNpQJoURzpUDOiqUfc.jpg" 
-                             alt="Agricultura Familiar" class="img-fluid agricultura-img">
+                        <img src="https://agro.insper.edu.br/storage/articles/March2024/aGvNpQJoURzpUDOiqUfc.jpg"
+                            alt="Agricultura Familiar" class="img-fluid agricultura-img">
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Benefícios -->
         <section class="coop-benefits mb-5">
             <div class="container">
                 <h2 class="text-center mb-5 text-agro">Vantagens do Cooperativismo Agrícola</h2>
@@ -258,7 +307,6 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
             </div>
         </section>
 
-        <!-- Valores -->
         <section class="mb-5">
             <div class="coop-values">
                 <h2 class="text-center mb-4">Valores do Cooperativismo Agrícola</h2>
@@ -284,25 +332,21 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
         </section>
     </div>
 
-    <!-- Footer -->
     <?php include 'includes/_footer.php'; ?>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- JavaScript Personalizado -->
+
     <script>
-        // Animação suave para links internos
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const links = document.querySelectorAll('a[href^="#"]');
-            
+
             links.forEach(link => {
-                link.addEventListener('click', function(e) {
+                link.addEventListener('click', function (e) {
                     e.preventDefault();
-                    
+
                     const targetId = this.getAttribute('href');
                     const targetElement = document.querySelector(targetId);
-                    
+
                     if (targetElement) {
                         targetElement.scrollIntoView({
                             behavior: 'smooth',
@@ -312,22 +356,21 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
                 });
             });
 
-            // Adiciona classe active ao menu durante scroll
-            window.addEventListener('scroll', function() {
+            window.addEventListener('scroll', function () {
                 const sections = document.querySelectorAll('section');
                 const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
-                
+
                 let current = '';
-                
+
                 sections.forEach(section => {
                     const sectionTop = section.offsetTop;
                     const sectionHeight = section.clientHeight;
-                    
+
                     if (pageYOffset >= sectionTop - 60) {
                         current = section.getAttribute('id');
                     }
                 });
-                
+
                 navLinks.forEach(link => {
                     link.classList.remove('active');
                     if (link.getAttribute('href') === `#${current}`) {
@@ -337,13 +380,12 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
             });
         });
 
-        // Animação para cards quando entram na viewport
         const observerOptions = {
             threshold: 0.1,
             rootMargin: '0px 0px -50px 0px'
         };
 
-        const observer = new IntersectionObserver(function(entries) {
+        const observer = new IntersectionObserver(function (entries) {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     entry.target.style.opacity = '1';
@@ -352,7 +394,6 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
             });
         }, observerOptions);
 
-        // Aplica animação aos cards
         document.querySelectorAll('.principios-card').forEach(card => {
             card.style.opacity = '0';
             card.style.transform = 'translateY(20px)';
@@ -361,8 +402,9 @@ $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através 
         });
     </script>
     <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
-  <script>
-    new window.VLibras.Widget('https://vlibras.gov.br/app');
-  </script>
+    <script>
+        new window.VLibras.Widget('https://vlibras.gov.br/app');
+    </script>
 </body>
+
 </html>

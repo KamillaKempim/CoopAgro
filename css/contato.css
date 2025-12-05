@@ -1,4 +1,4 @@
-/* Banner igual estilo do site */
+
 .contato-header {
     background: linear-gradient(rgba(20, 61, 15, 0.6), rgba(20, 61, 15, 0.6)),
                 url('../images/contato.png');
@@ -13,7 +13,6 @@
     margin-bottom: 40px;
 }
 
-/* Card do formulário */
 .contato-card {
     max-width: 700px;
     margin: 0 auto 60px auto;
@@ -24,7 +23,6 @@
     box-shadow: 0 0 15px rgba(0,0,0,0.1);
 }
 
-/* Ajuste dos inputs */
 form .form-label {
     font-weight: 600;
     color: #143d0f;
@@ -34,4 +32,153 @@ button.btn-success {
     font-size: 18px;
     padding: 10px;
     border-radius: 10px;
+}
+
+.painel-flutuante {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+
+#btnAbrir {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  background-color: #0c7534;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  transition: all 0.2s;
+}
+
+#btnAbrir:hover {
+  background-color: #0b7d44;
+}
+
+
+.painel-acessibilidade {
+  display: none; 
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  background: #ffffff;
+  color:rgb(11, 66, 5);
+  padding: 12px 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+
+.painel-acessibilidade button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: all 0.2s;
+  background-color: #f0f0f0;
+}
+
+.painel-acessibilidade button:hover {
+  background-color: #d4d4d4;
+}
+
+
+.modo-contraste, 
+.modo-contraste * {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+}
+
+.modo-contraste a {
+  color: #FFD700 !important;
+  text-decoration: underline;
+}
+
+.modo-contraste img {
+  filter: brightness(0.8) !important;
+}
+
+.modo-contraste, 
+.modo-contraste * {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+  fill: #fff !important;
+  stroke: #fff !important;
+}
+
+.modo-contraste a,
+.modo-contraste a * {
+  color: #FFD700 !important;
+  text-decoration: underline !important;
+}
+
+.modo-contraste * {
+  background-image: none !important;
+}
+
+.modo-contraste img,
+.modo-contraste [style*="background-image"] {
+  filter: grayscale(1) brightness(0.4) !important;
+}
+
+.modo-contraste .card,
+.modo-contraste .container,
+.modo-contraste section,
+.modo-contraste .row,
+.modo-contraste .col,
+.modo-contraste footer,
+.modo-contraste header,
+.modo-contraste nav {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+
+.modo-contraste button,
+.modo-contraste .btn {
+  background-color: #222 !important;
+  color: #fff !important;
+  border: 1px solid #fff !important;
+}
+
+.modo-contraste .bi,
+.modo-contraste i {
+  color: #fff !important;
+}
+
+.modo-contraste .carousel-item,
+.modo-contraste .carousel-caption {
+  background-color: #000 !important;
+}
+
+@media (max-width: 768px) {
+  .container img {
+    display: none !important;
+  }
+}
+@media (max-width: 768px) {
+  .texto {
+    width: 100% !important;
+  }
+}
+@media (max-width: 768px) {
+  .hero {
+    height: auto;
+  }
+
+  .hero-img {
+    width: 100%;
+    height: auto;
+    object-fit: contain; 
+  }
+}
+.modo-contraste img,
+.modo-contraste [style*="background-image"] {
+  filter: grayscale(0.2) brightness(0.8) !important; 
 }

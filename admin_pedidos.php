@@ -3,7 +3,6 @@ require_once 'includes/auth.php';
 require_once 'config/database.php';
 checkAuth();
 
-// Verificar se o usuário é administrador
 $usuario_id = intval($_SESSION['user_id']);
 
 try {
@@ -24,9 +23,7 @@ try {
 try {
     $conn = getDBConnection();
     
-    // Processar atualização de status
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['atualizar_status'])) {
-        // Verifica token CSRF
         if (!verifyCSRFToken($_POST['csrf_token'])) {
             $_SESSION['error'] = 'Token CSRF inválido.';
             header("Location: admin_pedidos.php");
@@ -36,7 +33,6 @@ try {
         $pedido_id = intval($_POST['pedido_id']);
         $novo_status = sanitizeInput($_POST['novo_status']);
         
-        // Validar status
         $status_validos = ['pendente', 'confirmado', 'preparando', 'enviado', 'entregue', 'cancelado'];
         if (!in_array($novo_status, $status_validos)) {
             $_SESSION['error'] = 'Status inválido.';
@@ -44,7 +40,6 @@ try {
             exit();
         }
         
-        // Verificar se o pedido existe
         $checkStmt = $conn->prepare("SELECT id FROM pedidos WHERE id = ?");
         $checkStmt->execute([$pedido_id]);
         
@@ -54,11 +49,9 @@ try {
             exit();
         }
         
-        // Atualizar status do pedido
         $updateStmt = $conn->prepare("UPDATE pedidos SET status = ? WHERE id = ?");
         $updateStmt->execute([$novo_status, $pedido_id]);
         
-        // Log da ação
         logSecurity($usuario_id, 'status_pedido_atualizado', "Pedido #{$pedido_id} atualizado para {$novo_status}");
         
         $_SESSION['success'] = "Status do pedido #{$pedido_id} atualizado com sucesso!";
@@ -84,7 +77,6 @@ try {
     $stmt->execute();
     $pedidos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Estatísticas para o dashboard
     $statsStmt = $conn->prepare("
         SELECT 
             COUNT(*) as total_pedidos,
@@ -105,7 +97,6 @@ try {
     logSecurity($usuario_id, 'erro_admin_pedidos', "Erro: " . $e->getMessage());
 }
 
-// Opções de status disponíveis
 $status_opcoes = [
     'pendente' => 'Pendente',
     'confirmado' => 'Confirmado', 
@@ -115,7 +106,6 @@ $status_opcoes = [
     'cancelado' => 'Cancelado'
 ];
 
-// Garantir que todas as chaves do array de estatísticas existam
 $estatisticas_defaults = [
     'total_pedidos' => 0,
     'pendentes' => 0,
@@ -219,14 +209,216 @@ if (isset($estatisticas)) {
                 padding: 0.2rem 0.4rem;
             }
         }
+        /* Botão de acessibilidade */
+.painel-flutuante {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+
+#btnAbrir {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  background-color: #0c7534;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  transition: all 0.2s;
+}
+
+#btnAbrir:hover {
+  background-color: #0b7d44;
+}
+
+
+.painel-acessibilidade {
+  display: none; 
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  background: #ffffff;
+  color:rgb(11, 66, 5);
+  padding: 12px 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+
+.painel-acessibilidade button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: all 0.2s;
+  background-color: #f0f0f0;
+}
+
+.painel-acessibilidade button:hover {
+  background-color: #d4d4d4;
+}
+
+
+.modo-contraste, 
+.modo-contraste * {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+}
+
+.modo-contraste a {
+  color: #FFD700 !important;
+  text-decoration: underline;
+}
+
+.modo-contraste img {
+  filter: brightness(0.8) !important;
+}
+
+.modo-contraste, 
+.modo-contraste * {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+  fill: #fff !important;
+  stroke: #fff !important;
+}
+
+.modo-contraste a,
+.modo-contraste a * {
+  color: #FFD700 !important;
+  text-decoration: underline !important;
+}
+
+.modo-contraste * {
+  background-image: none !important;
+}
+
+.modo-contraste img,
+.modo-contraste [style*="background-image"] {
+  filter: grayscale(1) brightness(0.4) !important;
+}
+
+.modo-contraste .card,
+.modo-contraste .container,
+.modo-contraste section,
+.modo-contraste .row,
+.modo-contraste .col,
+.modo-contraste footer,
+.modo-contraste header,
+.modo-contraste nav {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+
+.modo-contraste button,
+.modo-contraste .btn {
+  background-color: #222 !important;
+  color: #fff !important;
+  border: 1px solid #fff !important;
+}
+
+.modo-contraste .bi,
+.modo-contraste i {
+  color: #fff !important;
+}
+
+.modo-contraste .carousel-item,
+.modo-contraste .carousel-caption {
+  background-color: #000 !important;
+}
+
+@media (max-width: 768px) {
+  .container img {
+    display: none !important;
+  }
+}
+@media (max-width: 768px) {
+  .texto {
+    width: 100% !important;
+  }
+}
+@media (max-width: 768px) {
+  .hero {
+    height: auto;
+  }
+
+  .hero-img {
+    width: 100%;
+    height: auto;
+    object-fit: contain; 
+  }
+}
+.modo-contraste img,
+.modo-contraste [style*="background-image"] {
+  filter: grayscale(0.2) brightness(0.8) !important; 
+}
     </style>
 </head>
 <body>
-    <!-- VLibras -->
+    
     <div vw class="enabled">
         <div vw-access-button class="active"></div>
         <div vw-plugin-wrapper></div>
     </div>
+
+<div class="painel-flutuante">
+  <button id="btnAbrir">⚙️</button>
+  <div class="painel-acessibilidade" id="painelAcessibilidade">
+    <h4>Painel de Acessibilidade</h4> 
+    <button onclick="contraste()"><i class="bi bi-brightness-high-fill">  </i>Alto contraste</button>
+    <button onclick="fonteMais()"><i class="bi bi-type-bold"></i></button>
+    <button onclick="fonteMenos()"><i class="bi bi-type"></i></button>
+    <button onclick="resetar()"><i class="bi bi-arrow-counterclockwise"></i>  Padrão</button>
+  </div>
+</div>
+
+
+<script>
+let tamanho = localStorage.getItem("fonte") || 16;
+document.body.style.fontSize = tamanho + "px";
+
+if(localStorage.getItem("contraste") === "ativo") {
+  document.body.classList.add("modo-contraste");
+}
+
+function contraste() {
+  document.body.classList.toggle("modo-contraste");
+  let ativo = document.body.classList.contains("modo-contraste");
+  localStorage.setItem("contraste", ativo ? "ativo" : "inativo");
+}
+
+function fonteMais() {
+  tamanho = parseInt(tamanho) + 2;
+  document.body.style.fontSize = tamanho + "px";
+  localStorage.setItem("fonte", tamanho);
+}
+
+function fonteMenos() {
+  tamanho = parseInt(tamanho) - 2;
+  document.body.style.fontSize = tamanho + "px";
+  localStorage.setItem("fonte", tamanho);
+}
+
+function resetar() {
+  document.body.classList.remove("modo-contraste");
+  document.body.style.fontSize = "16px";
+  localStorage.clear();
+}
+
+const btnAbrir = document.getElementById('btnAbrir');
+const painel = document.getElementById('painelAcessibilidade');
+
+btnAbrir.addEventListener('click', () => {
+  painel.style.display = painel.style.display === 'flex' ? 'none' : 'flex';
+});
+</script>
+
     
     <?php include 'includes/_menu.php'; ?>
     
@@ -260,7 +452,6 @@ if (isset($estatisticas)) {
                     <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
                 <?php endif; ?>
                 
-                <!-- Dashboard de Estatísticas -->
                 <div class="row mb-4">
                     <div class="col-6 col-md-4 col-lg-2 mb-3">
                         <div class="card card-dashboard bg-primary text-white">
@@ -318,7 +509,6 @@ if (isset($estatisticas)) {
                     </div>
                 </div>
                 
-                <!-- Filtros -->
                 <div class="card mb-4">
                     <div class="card-body">
                         <h5 class="card-title text-success">
@@ -340,7 +530,6 @@ if (isset($estatisticas)) {
                     </div>
                 </div>
                 
-                <!-- Tabela de Pedidos -->
                 <div class="card">
                     <div class="card-header bg-success text-white">
                         <h5 class="card-title mb-0">
@@ -472,18 +661,16 @@ if (isset($estatisticas)) {
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Filtros por status
+       
         document.querySelectorAll('.filter-btn').forEach(button => {
             button.addEventListener('click', function() {
                 const status = this.getAttribute('data-status');
                 
-                // Atualizar botões ativos
                 document.querySelectorAll('.filter-btn').forEach(btn => {
                     btn.classList.remove('active', 'filter-active');
                 });
                 this.classList.add('active', 'filter-active');
                 
-                // Filtrar tabela
                 const rows = document.querySelectorAll('.pedido-row');
                 rows.forEach(row => {
                     if (status === 'todos' || row.getAttribute('data-status') === status) {
@@ -495,9 +682,7 @@ if (isset($estatisticas)) {
             });
         });
         
-        // Função para exportar relatório
         function exportarRelatorio() {
-            // Criar dados para CSV
             let csv = 'ID;Produto;Cliente;Quantidade;Total;Data;Status;Endereço\n';
             
             document.querySelectorAll('.pedido-row').forEach(row => {
@@ -516,7 +701,6 @@ if (isset($estatisticas)) {
                 }
             });
             
-            // Criar blob e download
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
@@ -532,17 +716,14 @@ if (isset($estatisticas)) {
             alert('Relatório exportado com sucesso!');
         }
         
-        // Função para ver detalhes do pedido
         function verDetalhes(pedidoId) {
             alert(`Detalhes do pedido #${pedidoId}\n\nEsta funcionalidade pode ser expandida para mostrar um modal com informações completas do pedido, histórico de status, etc.`);
         }
         
-        // Função para contatar cliente
         function contatarCliente(email, telefone) {
             const mensagem = `Contatar cliente:\n\nEmail: ${email}\nTelefone: ${telefone}\n\nClique em OK para copiar as informações.`;
             
             if (confirm(mensagem)) {
-                // Copiar informações para área de transferência
                 const texto = `Email: ${email}\nTelefone: ${telefone}`;
                 navigator.clipboard.writeText(texto)
                     .then(() => alert('Informações copiadas para a área de transferência!'))
@@ -550,7 +731,6 @@ if (isset($estatisticas)) {
             }
         }
         
-        // Inicializar tooltips do Bootstrap
         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl);

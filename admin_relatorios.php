@@ -3,32 +3,29 @@ require_once 'includes/auth.php';
 require_once 'config/database.php';
 checkAuth();
 
-// Verificar se o usuário é administrador - CORREÇÃO
 $usuario_id = $_SESSION['user_id'];
 try {
     $conn = getDBConnection();
     $stmt = $conn->prepare("SELECT tipo_usuario FROM usuarios WHERE id = ?");
     $stmt->execute([$usuario_id]);
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     if (!$usuario || $usuario['tipo_usuario'] !== 'Administrador') {
         header("Location: perfil.php");
         exit();
     }
-} catch(PDOException $e) {
-    // Em caso de erro, ainda permite acesso para não quebrar a página
+} catch (PDOException $e) {
     $error_permissao = "Erro ao verificar permissões: " . $e->getMessage();
 }
 
 $relatorio = [];
-$periodo = $_GET['periodo'] ?? 'mes'; // mes, semana, ano, personalizado
+$periodo = $_GET['periodo'] ?? 'mes';
 $data_inicio = $_GET['data_inicio'] ?? date('Y-m-01');
 $data_fim = $_GET['data_fim'] ?? date('Y-m-t');
 
 try {
     $conn = getDBConnection();
-    
-    // Construir a query base
+
     $query = "
         SELECT 
             p.id,
@@ -46,8 +43,7 @@ try {
         INNER JOIN usuarios u ON pd.usuario_id = u.id
         WHERE pd.status = 'entregue'
     ";
-    
-    // Adicionar filtro de período
+
     $params = [];
     if ($periodo === 'semana') {
         $query .= " AND pd.data_pedido >= DATE_SUB(NOW(), INTERVAL 1 WEEK)";
@@ -60,26 +56,24 @@ try {
         $params[] = $data_inicio;
         $params[] = $data_fim;
     }
-    
+
     $query .= " ORDER BY pd.data_pedido DESC";
-    
+
     $stmt = $conn->prepare($query);
     $stmt->execute($params);
     $vendas = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Calcular totais - CORREÇÃO: Inicializar variáveis mesmo sem vendas
+
     $total_bruto = 0;
     $total_liquido = 0;
     $total_custo = 0;
     $total_pedidos = count($vendas);
-    
+
     foreach ($vendas as $venda) {
         $total_bruto += $venda['valor_bruto'];
         $total_custo += $venda['custo_total'];
         $total_liquido += $venda['valor_liquido'];
     }
-    
-    // Estatísticas adicionais - CORREÇÃO: Query mais segura
+
     $queryStats = "
         SELECT 
             COUNT(DISTINCT usuario_id) as total_clientes,
@@ -88,8 +82,7 @@ try {
         FROM pedidos 
         WHERE status = 'entregue'
     ";
-    
-    // Adicionar filtro de período nas estatísticas também
+
     if ($periodo === 'semana') {
         $queryStats .= " AND data_pedido >= DATE_SUB(NOW(), INTERVAL 1 WEEK)";
     } elseif ($periodo === 'mes') {
@@ -99,7 +92,7 @@ try {
     } elseif ($periodo === 'personalizado' && $data_inicio && $data_fim) {
         $queryStats .= " AND DATE(data_pedido) BETWEEN ? AND ?";
     }
-    
+
     $stmtStats = $conn->prepare($queryStats);
     if ($periodo === 'personalizado' && $data_inicio && $data_fim) {
         $stmtStats->execute([$data_inicio, $data_fim]);
@@ -107,8 +100,7 @@ try {
         $stmtStats->execute();
     }
     $estatisticas = $stmtStats->fetch(PDO::FETCH_ASSOC);
-    
-    // Garantir valores padrão se não houver dados
+
     if (!$estatisticas) {
         $estatisticas = [
             'total_clientes' => 0,
@@ -116,10 +108,9 @@ try {
             'total_itens' => 0
         ];
     }
-    
-} catch(PDOException $e) {
+
+} catch (PDOException $e) {
     $error = "Erro ao gerar relatório: " . $e->getMessage();
-    // Inicializar variáveis mesmo com erro
     $vendas = [];
     $total_bruto = 0;
     $total_liquido = 0;
@@ -134,6 +125,7 @@ try {
 
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -146,71 +138,278 @@ try {
             --verde-secundario: #4caf50;
             --roxo-admin: #6a1b9a;
         }
-        
+
         .card-relatorio {
             border: none;
             border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease;
         }
-        
+
         .card-relatorio:hover {
             transform: translateY(-5px);
         }
-        
+
         .valor-positivo {
             color: var(--verde-principal);
             font-weight: bold;
         }
-        
+
         .valor-negativo {
             color: #dc3545;
             font-weight: bold;
         }
-        
+
         .btn-admin {
             background: linear-gradient(135deg, var(--roxo-admin) 0%, #9c4dcc 100%);
             color: white;
             border: none;
         }
-        
+
         .btn-admin:hover {
             background: linear-gradient(135deg, #9c4dcc 0%, var(--roxo-admin) 100%);
             color: white;
         }
-        
+
         .table-hover tbody tr:hover {
             background-color: rgba(106, 27, 154, 0.05);
         }
-        
+
         .badge-entregue {
             background-color: #d4edda;
             color: #155724;
         }
-        
+
         .filtros {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             border-radius: 10px;
             padding: 20px;
         }
-        
+
         .empty-state {
             padding: 3rem 1rem;
             text-align: center;
         }
-        
+
         .empty-state i {
             font-size: 4rem;
             margin-bottom: 1rem;
         }
+
+        /* Botão de acessibilidade */
+        .painel-flutuante {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        #btnAbrir {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background-color: #0c7534;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s;
+        }
+
+        #btnAbrir:hover {
+            background-color: #0b7d44;
+        }
+
+
+        .painel-acessibilidade {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 10px;
+            background: #ffffff;
+            color: rgb(11, 66, 5);
+            padding: 12px 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+
+        .painel-acessibilidade button {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s;
+            background-color: #f0f0f0;
+        }
+
+        .painel-acessibilidade button:hover {
+            background-color: #d4d4d4;
+        }
+
+
+        .modo-contraste,
+        .modo-contraste * {
+            background-color: #000 !important;
+            color: #fff !important;
+            border-color: #fff !important;
+        }
+
+        .modo-contraste a {
+            color: #FFD700 !important;
+            text-decoration: underline;
+        }
+
+        .modo-contraste img {
+            filter: brightness(0.8) !important;
+        }
+
+        .modo-contraste,
+        .modo-contraste * {
+            background-color: #000 !important;
+            color: #fff !important;
+            border-color: #fff !important;
+            fill: #fff !important;
+            stroke: #fff !important;
+        }
+
+        .modo-contraste a,
+        .modo-contraste a * {
+            color: #FFD700 !important;
+            text-decoration: underline !important;
+        }
+
+        .modo-contraste * {
+            background-image: none !important;
+        }
+
+        .modo-contraste img,
+        .modo-contraste [style*="background-image"] {
+            filter: grayscale(1) brightness(0.4) !important;
+        }
+
+        .modo-contraste .card,
+        .modo-contraste .container,
+        .modo-contraste section,
+        .modo-contraste .row,
+        .modo-contraste .col,
+        .modo-contraste footer,
+        .modo-contraste header,
+        .modo-contraste nav {
+            background-color: #000 !important;
+            color: #fff !important;
+        }
+
+        .modo-contraste button,
+        .modo-contraste .btn {
+            background-color: #222 !important;
+            color: #fff !important;
+            border: 1px solid #fff !important;
+        }
+
+        .modo-contraste .bi,
+        .modo-contraste i {
+            color: #fff !important;
+        }
+
+        .modo-contraste .carousel-item,
+        .modo-contraste .carousel-caption {
+            background-color: #000 !important;
+        }
+
+        @media (max-width: 768px) {
+            .container img {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .texto {
+                width: 100% !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero {
+                height: auto;
+            }
+
+            .hero-img {
+                width: 100%;
+                height: auto;
+                object-fit: contain;
+            }
+        }
+
+        .modo-contraste img,
+        .modo-contraste [style*="background-image"] {
+            filter: grayscale(0.2) brightness(0.8) !important;
+        }
     </style>
 </head>
+
 <body>
-      <!-- VLibras -->
-  <div vw class="enabled">
-    <div vw-access-button class="active"></div>
-    <div vw-plugin-wrapper></div>
-  </div>
+
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper></div>
+    </div>
+
+    <div class="painel-flutuante">
+        <button id="btnAbrir">⚙️</button>
+        <div class="painel-acessibilidade" id="painelAcessibilidade">
+            <h4>Painel de Acessibilidade</h4>
+            <button onclick="contraste()"><i class="bi bi-brightness-high-fill"> </i>Alto contraste</button>
+            <button onclick="fonteMais()"><i class="bi bi-type-bold"></i></button>
+            <button onclick="fonteMenos()"><i class="bi bi-type"></i></button>
+            <button onclick="resetar()"><i class="bi bi-arrow-counterclockwise"></i> Padrão</button>
+        </div>
+    </div>
+
+
+    <script>
+        let tamanho = localStorage.getItem("fonte") || 16;
+        document.body.style.fontSize = tamanho + "px";
+
+        if (localStorage.getItem("contraste") === "ativo") {
+            document.body.classList.add("modo-contraste");
+        }
+
+        function contraste() {
+            document.body.classList.toggle("modo-contraste");
+            let ativo = document.body.classList.contains("modo-contraste");
+            localStorage.setItem("contraste", ativo ? "ativo" : "inativo");
+        }
+
+        function fonteMais() {
+            tamanho = parseInt(tamanho) + 2;
+            document.body.style.fontSize = tamanho + "px";
+            localStorage.setItem("fonte", tamanho);
+        }
+
+        function fonteMenos() {
+            tamanho = parseInt(tamanho) - 2;
+            document.body.style.fontSize = tamanho + "px";
+            localStorage.setItem("fonte", tamanho);
+        }
+
+        function resetar() {
+            document.body.classList.remove("modo-contraste");
+            document.body.style.fontSize = "16px";
+            localStorage.clear();
+        }
+
+        const btnAbrir = document.getElementById('btnAbrir');
+        const painel = document.getElementById('painelAcessibilidade');
+
+        btnAbrir.addEventListener('click', () => {
+            painel.style.display = painel.style.display === 'flex' ? 'none' : 'flex';
+        });
+    </script>
+
     <?php include 'includes/_menu.php'; ?>
 
     <div class="container-fluid py-4">
@@ -248,27 +447,31 @@ try {
                             <div class="col-md-3">
                                 <label for="periodo" class="form-label">Período</label>
                                 <select class="form-select" id="periodo" name="periodo">
-                                    <option value="semana" <?php echo $periodo === 'semana' ? 'selected' : ''; ?>>Última Semana</option>
-                                    <option value="mes" <?php echo $periodo === 'mes' ? 'selected' : ''; ?>>Último Mês</option>
-                                    <option value="ano" <?php echo $periodo === 'ano' ? 'selected' : ''; ?>>Último Ano</option>
+                                    <option value="semana" <?php echo $periodo === 'semana' ? 'selected' : ''; ?>>Última
+                                        Semana</option>
+                                    <option value="mes" <?php echo $periodo === 'mes' ? 'selected' : ''; ?>>Último Mês
+                                    </option>
+                                    <option value="ano" <?php echo $periodo === 'ano' ? 'selected' : ''; ?>>Último Ano
+                                    </option>
                                     <option value="personalizado" <?php echo $periodo === 'personalizado' ? 'selected' : ''; ?>>Personalizado</option>
                                 </select>
                             </div>
-                            
+
                             <?php if ($periodo === 'personalizado'): ?>
-                            <div class="col-md-3">
-                                <label for="data_inicio" class="form-label">Data Início</label>
-                                <input type="date" class="form-control" id="data_inicio" name="data_inicio" 
-                                       value="<?php echo htmlspecialchars($data_inicio); ?>">
-                            </div>
-                            <div class="col-md-3">
-                                <label for="data_fim" class="form-label">Data Fim</label>
-                                <input type="date" class="form-control" id="data_fim" name="data_fim" 
-                                       value="<?php echo htmlspecialchars($data_fim); ?>">
-                            </div>
+                                <div class="col-md-3">
+                                    <label for="data_inicio" class="form-label">Data Início</label>
+                                    <input type="date" class="form-control" id="data_inicio" name="data_inicio"
+                                        value="<?php echo htmlspecialchars($data_inicio); ?>">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="data_fim" class="form-label">Data Fim</label>
+                                    <input type="date" class="form-control" id="data_fim" name="data_fim"
+                                        value="<?php echo htmlspecialchars($data_fim); ?>">
+                                </div>
                             <?php endif; ?>
-                            
-                            <div class="col-md-<?php echo $periodo === 'personalizado' ? '3' : '9'; ?> d-flex align-items-end">
+
+                            <div
+                                class="col-md-<?php echo $periodo === 'personalizado' ? '3' : '9'; ?> d-flex align-items-end">
                                 <button type="submit" class="btn btn-admin w-100">
                                     <i class="bi bi-filter"></i> Aplicar Filtros
                                 </button>
@@ -277,28 +480,29 @@ try {
                     </div>
                 </div>
 
-                <!-- Cards de Resumo -->
                 <div class="row mb-4">
                     <div class="col-md-3 mb-3">
                         <div class="card card-relatorio text-center p-3">
                             <div class="card-body">
                                 <i class="bi bi-currency-dollar display-6 text-success mb-3"></i>
-                                <h3 class="valor-positivo">R$ <?php echo number_format($total_bruto, 2, ',', '.'); ?></h3>
+                                <h3 class="valor-positivo">R$ <?php echo number_format($total_bruto, 2, ',', '.'); ?>
+                                </h3>
                                 <p class="text-muted mb-0">Valor Bruto Total</p>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-3 mb-3">
                         <div class="card card-relatorio text-center p-3">
                             <div class="card-body">
                                 <i class="bi bi-cash-coin display-6 text-primary mb-3"></i>
-                                <h3 class="valor-positivo">R$ <?php echo number_format($total_liquido, 2, ',', '.'); ?></h3>
+                                <h3 class="valor-positivo">R$ <?php echo number_format($total_liquido, 2, ',', '.'); ?>
+                                </h3>
                                 <p class="text-muted mb-0">Valor Líquido Total</p>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-3 mb-3">
                         <div class="card card-relatorio text-center p-3">
                             <div class="card-body">
@@ -308,7 +512,7 @@ try {
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-3 mb-3">
                         <div class="card card-relatorio text-center p-3">
                             <div class="card-body">
@@ -320,7 +524,6 @@ try {
                     </div>
                 </div>
 
-                <!-- Estatísticas Detalhadas -->
                 <div class="row mb-4">
                     <div class="col-md-4">
                         <div class="card">
@@ -332,24 +535,26 @@ try {
                                 $margem_lucro = $total_bruto > 0 ? ($total_liquido / $total_bruto) * 100 : 0;
                                 $classe_margem = $margem_lucro >= 20 ? 'valor-positivo' : ($margem_lucro >= 10 ? 'text-warning' : 'valor-negativo');
                                 ?>
-                                <h2 class="<?php echo $classe_margem; ?>"><?php echo number_format($margem_lucro, 1); ?>%</h2>
+                                <h2 class="<?php echo $classe_margem; ?>">
+                                    <?php echo number_format($margem_lucro, 1); ?>%</h2>
                                 <p class="text-muted mb-0">Margem líquida sobre vendas</p>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-4">
                         <div class="card">
                             <div class="card-header bg-light">
                                 <h6 class="mb-0"><i class="bi bi-basket"></i> Ticket Médio</h6>
                             </div>
                             <div class="card-body text-center">
-                                <h2 class="text-primary">R$ <?php echo number_format($estatisticas['ticket_medio'] ?? 0, 2, ',', '.'); ?></h2>
+                                <h2 class="text-primary">R$
+                                    <?php echo number_format($estatisticas['ticket_medio'] ?? 0, 2, ',', '.'); ?></h2>
                                 <p class="text-muted mb-0">Valor médio por pedido</p>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-4">
                         <div class="card">
                             <div class="card-header bg-light">
@@ -363,7 +568,6 @@ try {
                     </div>
                 </div>
 
-                <!-- Tabela de Vendas Detalhadas -->
                 <div class="card">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
@@ -378,8 +582,8 @@ try {
                                 <h4 class="mt-3">Nenhuma venda encontrada</h4>
                                 <p class="mb-4">Não há pedidos entregues no período selecionado.</p>
                                 <div class="alert alert-info">
-                                    <i class="bi bi-info-circle"></i> 
-                                    <strong>Informação:</strong> Esta tela exibe apenas pedidos com status "Entregue". 
+                                    <i class="bi bi-info-circle"></i>
+                                    <strong>Informação:</strong> Esta tela exibe apenas pedidos com status "Entregue".
                                     Quando houver vendas concluídas, elas aparecerão aqui automaticamente.
                                 </div>
                             </div>
@@ -402,9 +606,9 @@ try {
                                     <tbody>
                                         <?php foreach ($vendas as $venda): ?>
                                             <?php
-                                            $margem_item = $venda['valor_bruto'] > 0 ? 
+                                            $margem_item = $venda['valor_bruto'] > 0 ?
                                                 (($venda['valor_liquido'] / $venda['valor_bruto']) * 100) : 0;
-                                            $classe_margem_item = $margem_item >= 20 ? 'valor-positivo' : 
+                                            $classe_margem_item = $margem_item >= 20 ? 'valor-positivo' :
                                                 ($margem_item >= 10 ? 'text-warning' : 'valor-negativo');
                                             ?>
                                             <tr>
@@ -413,9 +617,12 @@ try {
                                                 <td><?php echo htmlspecialchars($venda['produto_nome']); ?></td>
                                                 <td><?php echo $venda['quantidade']; ?></td>
                                                 <td>R$ <?php echo number_format($venda['preco_unitario'], 2, ',', '.'); ?></td>
-                                                <td>R$ <?php echo number_format($venda['preco_custo'] ?? 0, 2, ',', '.'); ?></td>
-                                                <td class="valor-positivo">R$ <?php echo number_format($venda['valor_bruto'], 2, ',', '.'); ?></td>
-                                                <td class="<?php echo $venda['valor_liquido'] >= 0 ? 'valor-positivo' : 'valor-negativo'; ?>">
+                                                <td>R$ <?php echo number_format($venda['preco_custo'] ?? 0, 2, ',', '.'); ?>
+                                                </td>
+                                                <td class="valor-positivo">R$
+                                                    <?php echo number_format($venda['valor_bruto'], 2, ',', '.'); ?></td>
+                                                <td
+                                                    class="<?php echo $venda['valor_liquido'] >= 0 ? 'valor-positivo' : 'valor-negativo'; ?>">
                                                     R$ <?php echo number_format($venda['valor_liquido'], 2, ',', '.'); ?>
                                                 </td>
                                                 <td class="<?php echo $classe_margem_item; ?>">
@@ -435,11 +642,11 @@ try {
 
     <?php include 'includes/_footer.php'; ?>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-      <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
-  <script>
-    new window.VLibras.Widget('https://vlibras.gov.br/app');
-  </script>
+    <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    <script>
+        new window.VLibras.Widget('https://vlibras.gov.br/app');
+    </script>
 </body>
+
 </html>

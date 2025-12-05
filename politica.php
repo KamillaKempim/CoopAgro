@@ -15,10 +15,62 @@
     <div vw-plugin-wrapper></div>
 </div>
 
-<!-- Menu Superior -->
+<!-- Painel acessibilidade -->
+<div class="painel-flutuante">
+  <button id="btnAbrir">⚙️</button>
+  <div class="painel-acessibilidade" id="painelAcessibilidade">
+    <h4>Painel de Acessibilidade</h4> 
+    <button onclick="contraste()"><i class="bi bi-brightness-high-fill">  </i>Alto contraste</button>
+    <button onclick="fonteMais()"><i class="bi bi-type-bold"></i></button>
+    <button onclick="fonteMenos()"><i class="bi bi-type"></i></button>
+    <button onclick="resetar()"><i class="bi bi-arrow-counterclockwise"></i>  Padrão</button>
+  </div>
+</div>
+
+
+<script>
+let tamanho = localStorage.getItem("fonte") || 16;
+document.body.style.fontSize = tamanho + "px";
+
+if(localStorage.getItem("contraste") === "ativo") {
+  document.body.classList.add("modo-contraste");
+}
+
+function contraste() {
+  document.body.classList.toggle("modo-contraste");
+  let ativo = document.body.classList.contains("modo-contraste");
+  localStorage.setItem("contraste", ativo ? "ativo" : "inativo");
+}
+
+function fonteMais() {
+  tamanho = parseInt(tamanho) + 2;
+  document.body.style.fontSize = tamanho + "px";
+  localStorage.setItem("fonte", tamanho);
+}
+
+function fonteMenos() {
+  tamanho = parseInt(tamanho) - 2;
+  document.body.style.fontSize = tamanho + "px";
+  localStorage.setItem("fonte", tamanho);
+}
+
+function resetar() {
+  document.body.classList.remove("modo-contraste");
+  document.body.style.fontSize = "16px";
+  localStorage.clear();
+}
+
+const btnAbrir = document.getElementById('btnAbrir');
+const painel = document.getElementById('painelAcessibilidade');
+
+btnAbrir.addEventListener('click', () => {
+  painel.style.display = painel.style.display === 'flex' ? 'none' : 'flex';
+});
+</script>
+
+
 <?php include 'includes/_segundo_menu.php'; ?>
 
-<!-- Conteúdo Principal -->
 <main class="politica-container">
     <div class="politica-header">
         <div class="politica-header-content">
@@ -37,7 +89,6 @@
         </div>
     </div>
 
-    <!-- Navegação Rápida -->
     <nav class="politica-nav">
         <h3><i class="fas fa-bookmark"></i> Navegação Rápida</h3>
         <div class="nav-grid">
@@ -88,7 +139,6 @@
         </div>
     </nav>
 
-    <!-- Conteúdo da Política -->
     <div class="politica-content">
         <section id="introducao" class="politica-section">
             <div class="section-header">
@@ -457,7 +507,6 @@
             </div>
         </section>
 
-        <!-- Botão Voltar ao Topo -->
         <div class="back-to-top">
             <a href="#top" class="back-to-top-btn">
                 <i class="fas fa-arrow-up"></i>
@@ -467,14 +516,12 @@
     </div>
 </main>
 
-<!-- Rodapé -->
 <?php include 'includes/_footer.php'; ?>
 
 <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
 <script>
     new window.VLibras.Widget('https://vlibras.gov.br/app');
     
-    // Scroll suave para as âncoras
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             e.preventDefault();
@@ -492,7 +539,6 @@
         });
     });
     
-    // Botão voltar ao topo
     window.addEventListener('scroll', function() {
         const backToTopBtn = document.querySelector('.back-to-top-btn');
         if (window.scrollY > 500) {

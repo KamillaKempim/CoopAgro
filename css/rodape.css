@@ -1,7 +1,7 @@
 .coopagro-footer {
         background: linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%);
         color: white;
-        margin-top: auto; /* Para fixar no final da página */
+        margin-top: auto; 
     }
     
     .footer-content {

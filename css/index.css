@@ -1,4 +1,4 @@
-/* --- FONTES --- */
+
 @import url('https://fonts.googleapis.com/css2?family=Merge+One&family=Playfair+Display&display=swap');
 
 :root {
@@ -8,17 +8,14 @@
   --fonte-texto: 'Merge One', sans-serif ;
 }
 
-/* Todos os h2 do site, mesmo com classes Bootstrap */
 h2, h2.text-center, h2.titulo-sobre {
   font-family: 'Playfair Display', serif !important;
 }
 
-/* Todos os h3 e h5 (incluindo títulos de cards) */
 h3, h5, h5.card-title {
   font-family: 'Playfair Display', serif !important;
 }
 
-/* Todo o texto normal */
 body, p, span, li, h6 {
   font-family: 'Merge One', sans-serif !important;
 
@@ -152,27 +149,23 @@ main {
 .hero-img {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* cobre toda a tela */
+  object-fit: cover; 
 }
-
 
 .foto {
   width: 200px;
   height: auto;
 }
 
-
 #produtos #carouselProdutos {
-  border: 2px solid #faf5f5;  /* borda fina */
-  border-radius: 12px;        /* cantos levemente arredondados */
-  padding: 20px;              /* aumenta o espaço interno */
+  border: 2px solid #faf5f5;  
+  border-radius: 12px;        
+  padding: 20px;              
   background-color: transparent;
-  max-width: 1080px;          /* largura maior, mas não ocupa toda a tela */
-  margin: 30px auto;          /* centraliza e dá espaço em cima/baixo */
+  max-width: 1080px;          
+  margin: 30px auto;          
 }
 
-
-/* --- SOBRE NÓS --- */
 #sobre-nos {
   background-color: var(--verde-principal);
   padding: 60px 20px;
@@ -190,7 +183,7 @@ main {
   display: flex;
   justify-content: center;
   gap: 30px;
-  flex-wrap: wrap; /* quebra em telas pequenas */
+  flex-wrap: wrap; 
 }
 
 .card-equipe {
@@ -369,6 +362,60 @@ main {
 .modo-contraste img {
   filter: brightness(0.8) !important;
 }
+
+.modo-contraste, 
+.modo-contraste * {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+  fill: #fff !important;
+  stroke: #fff !important;
+}
+
+.modo-contraste a,
+.modo-contraste a * {
+  color: #FFD700 !important;
+  text-decoration: underline !important;
+}
+
+.modo-contraste * {
+  background-image: none !important;
+}
+
+.modo-contraste img,
+.modo-contraste [style*="background-image"] {
+  filter: grayscale(1) brightness(0.4) !important;
+}
+
+.modo-contraste .card,
+.modo-contraste .container,
+.modo-contraste section,
+.modo-contraste .row,
+.modo-contraste .col,
+.modo-contraste footer,
+.modo-contraste header,
+.modo-contraste nav {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+
+.modo-contraste button,
+.modo-contraste .btn {
+  background-color: #222 !important;
+  color: #fff !important;
+  border: 1px solid #fff !important;
+}
+
+.modo-contraste .bi,
+.modo-contraste i {
+  color: #fff !important;
+}
+
+.modo-contraste .carousel-item,
+.modo-contraste .carousel-caption {
+  background-color: #000 !important;
+}
+
 @media (max-width: 768px) {
   .container img {
     display: none !important;
@@ -387,6 +434,10 @@ main {
   .hero-img {
     width: 100%;
     height: auto;
-    object-fit: contain; /* impede de cortar */
+    object-fit: contain; 
   }
+}
+.modo-contraste img,
+.modo-contraste [style*="background-image"] {
+  filter: grayscale(0.2) brightness(0.8) !important; 
 }

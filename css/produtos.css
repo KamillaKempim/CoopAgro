@@ -185,7 +185,6 @@
             margin-top: auto;
         }
         
-        /* Animações personalizadas para o carrossel */
         .carousel-item {
             transition: transform 0.8s ease-in-out;
         }
@@ -216,7 +215,6 @@
             transform: translate3d(0, 0, 0);
         }
         
-        /* Estilo para o estoque */
         .estoque-info {
             font-size: 0.8rem;
             color: #666;
@@ -233,7 +231,6 @@
             font-weight: bold;
         }
         
-        /* Ajustes para o carrossel de produtos individuais */
         .carousel-inner {
             padding: 0 60px;
         }
