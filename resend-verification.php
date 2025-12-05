@@ -187,6 +187,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </style>
 </head>
 <body>
+
+<!-- VLibras -->
+  <div vw class="enabled">
+    <div vw-access-button class="active"></div>
+    <div vw-plugin-wrapper></div>
+  </div>
+  
     <div class="resend-container">
         <div class="icon-container">
             <i class="bi bi-envelope-arrow-up"></i>

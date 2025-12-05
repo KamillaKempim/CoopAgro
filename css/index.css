@@ -369,3 +369,24 @@ main {
 .modo-contraste img {
   filter: brightness(0.8) !important;
 }
+@media (max-width: 768px) {
+  .container img {
+    display: none !important;
+  }
+}
+@media (max-width: 768px) {
+  .texto {
+    width: 100% !important;
+  }
+}
+@media (max-width: 768px) {
+  .hero {
+    height: auto;
+  }
+
+  .hero-img {
+    width: 100%;
+    height: auto;
+    object-fit: contain; /* impede de cortar */
+  }
+}

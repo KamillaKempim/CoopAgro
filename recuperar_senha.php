@@ -481,6 +481,12 @@ if ($step === 'reset' && empty($_POST) && isset($_GET['token'])) {
 </head>
 <body>
 
+<!-- VLibras -->
+  <div vw class="enabled">
+    <div vw-access-button class="active"></div>
+    <div vw-plugin-wrapper></div>
+  </div>
+
 <?php 
 // Incluir menu se existir
 if (file_exists('includes/_menu.php')) {

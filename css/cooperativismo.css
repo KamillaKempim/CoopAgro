@@ -134,8 +134,100 @@ nav a {
 }
 .navbar-nav {
   gap: 10px;
-  list-style: none; /* remove as bolinhas */
-  padding-left: 0;  /* remove o recuo padrão do UL */
+  list-style: none; 
+  padding-left: 0;  
   margin: 0;
-  display: flex;    /* deixa os itens lado a lado */
+  display: flex;    
+}
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1100;       
+  height: 72px;        
+  box-shadow: none;
+}
+body {
+  padding-top: 72px;   
+}
+.hero-section {
+  margin: 0;
+  margin-bottom: 40px;
+  padding-top: 0;      
+  overflow: visible !important;
+}
+
+.hero-img,
+.hero-section img {
+  width: 100% !important;
+  height: auto !important;      
+  max-height: none !important;
+  object-fit: cover;             
+  object-position: center top;   
+  display: block;
+}
+
+.hero-section {
+  background-position: center top !important;
+  background-size: cover !important;
+}
+@media (max-width: 768px) {
+  header {
+    height: 90px;         
+  }
+  body {
+    padding-top: 90px;
+  }
+  .hero, .hero-section {
+    height: auto !important;
+  }
+  .hero-img,
+  .hero-section img {
+    object-fit: contain !important; 
+    height: auto !important;
+    width: 100% !important;
+  }
+  .hero-section .container,
+  .hero-section .texto {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .carousel-item img {
+    width: 100% !important;
+    height: auto !important;
+    object-fit: cover;
+  }
+}
+header, .hero-section, .container, .msn {
+  overflow: visible !important;
+}
+header {
+  position: static !important;
+}
+
+body {
+  padding-top: 0 !important;
+}
+
+.hero-section {
+  padding-top: 40px !important; 
+}
+/* REMOVE QUALQUER ESPAÇO ENTRE O MENU E O CARROSSEL */
+.hero-section,
+.carousel,
+.carousel-inner,
+.carousel-item {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+header {
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.hero-section {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
 }

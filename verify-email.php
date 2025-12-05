@@ -249,6 +249,13 @@ if (empty($token)) {
     </style>
 </head>
 <body>
+
+<!-- VLibras -->
+  <div vw class="enabled">
+    <div vw-access-button class="active"></div>
+    <div vw-plugin-wrapper></div>
+  </div>
+  
     <div class="verification-container">
         <div class="icon-container">
             <?php if ($messageClass == 'success'): ?>
