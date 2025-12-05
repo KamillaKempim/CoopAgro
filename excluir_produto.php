@@ -86,7 +86,7 @@ try {
     }
     
     // Log da ação
-    logSecurity($usuario_id, 'produto_excluido', "Produto #{$id} '{$nomeProduto}' excluído");
+    
     
     $_SESSION['success'] = "Produto '{$nomeProduto}' excluído com sucesso!";
     header("Location: telaadministrativa.php");

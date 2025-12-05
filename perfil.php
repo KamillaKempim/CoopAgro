@@ -521,7 +521,9 @@ try {
                             <a href="admin_usuarios.php" class="btn btn-outline-info btn-profile">
                                 <i class="bi bi-people"></i> Gerenciar Usuários
                             </a>
-                            
+                             <a href="editar_produto.php" class="btn btn-outline-info btn-profile">
+                                <i class="bi bi-people"></i> Editar Produtos
+                            </a>
                             <a href="admin_relatorios.php" class="btn btn-outline-secondary btn-profile">
                                 <i class="bi bi-graph-up"></i> Relatórios
                             </a>

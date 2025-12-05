@@ -63,7 +63,7 @@ try {
                         // Mover a imagem do diretório de propostas para produtos
                         $novaImagemUrl = '';
                         if (!empty($proposta['imagem_url']) && $proposta['imagem_url'] !== 'sem-imagem.jpg') {
-                            $origem = 'uploads/propostas/' . $proposta['imagem_url'];
+                            $origem = 'uploads/produtos/' . $proposta['imagem_url'];
                             
                             // Validar se é um arquivo de imagem
                             $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
@@ -440,7 +440,7 @@ if (isset($_SESSION['success'])) {
                                 <div class="image-container">
                                     <?php 
                                     $imagemSrc = !empty($proposta['imagem_url']) && $proposta['imagem_url'] !== 'sem-imagem.jpg' 
-                                        ? 'uploads/propostas/' . htmlspecialchars($proposta['imagem_url']) 
+                                        ? 'uploads/produtos/' . htmlspecialchars($proposta['imagem_url']) 
                                         : 'https://via.placeholder.com/300x200/CCCCCC/969696?text=Sem+Imagem';
                                     ?>
                                     <img src="<?php echo $imagemSrc; ?>" 
