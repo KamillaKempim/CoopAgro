@@ -1,6 +1,6 @@
 <?php
 // Arquivo: login.php
-// Versão funcional simplificada com estilização completa
+// Versão atualizada para verificar email verificado
 
 // Habilitar erros temporariamente (remover em produção)
 error_reporting(E_ALL);
@@ -20,6 +20,7 @@ if (isset($_SESSION['user_id'])) {
 }
 
 $error = '';
+$info = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
@@ -31,16 +32,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $conn = getDBConnection();
             
-            // Buscar usuário
-            $sql = "SELECT id, nome, email, senha, tipo_usuario FROM usuarios WHERE email = ? OR nome = ?";
+            // Buscar usuário (incluindo email_verificado)
+            $sql = "SELECT id, nome, email, senha, tipo_usuario, email_verificado FROM usuarios WHERE email = ? OR nome = ?";
             $stmt = $conn->prepare($sql);
             $stmt->execute([$username, $username]);
             
             if ($stmt->rowCount() == 1) {
                 $user = $stmt->fetch(PDO::FETCH_ASSOC);
                 
+                // Verificar se o email está verificado
+                if ($user['email_verificado'] != 1) {
+                    $error = "❌ <strong>Email não verificado!</strong><br><br>";
+                    $error .= "📧 Para acessar sua conta, você precisa verificar seu email.<br>";
+                    $error .= "🔗 <a href='resend-verification.php?email=" . urlencode($user['email']) . "' class='text-warning fw-bold'>Reenviar link de verificação</a><br><br>";
+                    $error .= "📌 Verifique sua caixa de entrada <strong>(e a pasta de spam)</strong>.";
+                    
+                    // Mostrar também mensagem de informação
+                    $info = "📩 <strong>Email cadastrado:</strong> " . htmlspecialchars($user['email']) . "<br>";
+                    $info .= "👤 <strong>Nome:</strong> " . htmlspecialchars($user['nome']);
+                } 
                 // Verificar senha
-                if (password_verify($password, $user['senha'])) {
+                else if (password_verify($password, $user['senha'])) {
                     // Inicializar sessão
                     $_SESSION['user_id'] = $user['id'];
                     $_SESSION['username'] = $user['nome'];
@@ -79,6 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
+        /* O CSS permanece exatamente como estava */
         :root {
             --verde-principal: #2e7d32;
             --verde-secundario: #4caf50;
@@ -276,7 +289,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div vw-plugin-wrapper></div>
 </div>
 
-<?php require_once "includes/_menu.php"; ?>
+<?php if (file_exists('includes/_menu.php')) require_once "includes/_menu.php"; ?>
 
 <div class="container-fluid py-5">
     <div class="row justify-content-center">
@@ -291,7 +304,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php if (!empty($error)): ?>
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             <i class="bi bi-exclamation-triangle me-2"></i>
-                            <?php echo htmlspecialchars($error); ?>
+                            <?php echo $error; ?>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($info)): ?>
+                        <div class="alert alert-info alert-dismissible fade show" role="alert">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <?php echo $info; ?>
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
                     <?php endif; ?>
@@ -335,7 +356,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </button>
                     </form>
                     
-                    <div class="login-links mt-4 pt-3 border-top">                        
+                    <div class="login-links mt-4 pt-3 border-top">
+                        <p class="mb-3">
+                            <i class="bi bi-envelope me-1"></i>
+                            <a href="resend-verification.php">Não recebeu o email de verificação?</a>
+                        </p>
+                        
                         <p class="mt-4 mb-0">
                             <i class="bi bi-person-plus me-1"></i>
                             <a href="cadastro.php">Não tem uma conta? Cadastre-se</a>
@@ -354,7 +380,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </div>
 
-<?php require_once "includes/_footer.php"; ?>
+<?php if (file_exists('includes/_footer.php')) require_once "includes/_footer.php"; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>

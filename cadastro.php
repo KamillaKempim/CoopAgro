@@ -1,8 +1,10 @@
 <?php
 // Arquivo: cadastro.php (raiz)
-// Correções: Adicionado CSRF, validações mais robustas, sanitização
+// Sistema completo com verificação de email
 
+session_start();
 require_once 'config/database.php';
+require_once 'config/email.php'; // Agora usando config/email.php
 require_once 'includes/auth.php';
 
 // Se já estiver logado, redireciona para perfil
@@ -15,6 +17,14 @@ $message = '';
 $messageClass = '';
 $redirectToLogin = false;
 $csrf_token = generateCSRFToken('cadastro');
+
+// Configuração - Definir como false para desativar verificação de email (apenas para testes)
+$emailVerificationRequired = true;
+
+// Função para gerar token de verificação
+function generateEmailVerificationToken($length = 32) {
+    return bin2hex(random_bytes($length));
+}
 
 // Função para validar força da senha
 function validarForcaSenha($senha) {
@@ -46,7 +56,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION['cadastro_tempo'] = time();
         }
         
-        // Resetar após 1 hora se o tempo não foi definido ou passou 1 hora
+        // Resetar após 1 hora
         if (time() - $_SESSION['cadastro_tempo'] > 3600) {
             $_SESSION['cadastro_tentativas'] = 0;
             $_SESSION['cadastro_tempo'] = time();
@@ -65,19 +75,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             } else {
                 // Coletar e sanitizar dados
                 $dados = [
-                    'nome' => sanitizeInput($_POST['nome'] ?? ''),
+                    'nome' => filter_var($_POST['nome'] ?? '', FILTER_SANITIZE_STRING),
                     'email' => filter_var($_POST['email'] ?? '', FILTER_SANITIZE_EMAIL),
-                    'celular' => sanitizeInput($_POST['celular'] ?? ''),
+                    'celular' => filter_var($_POST['celular'] ?? '', FILTER_SANITIZE_STRING),
                     'senha' => $_POST['senha'] ?? '',
                     'confirmar_senha' => $_POST['confirmar_senha'] ?? '',
-                    'rua' => sanitizeInput($_POST['rua'] ?? ''),
-                    'cep' => sanitizeInput($_POST['cep'] ?? ''),
-                    'numero' => sanitizeInput($_POST['numero'] ?? ''),
-                    'bairro' => sanitizeInput($_POST['bairro'] ?? ''),
-                    'municipio' => sanitizeInput($_POST['municipio'] ?? ''),
-                    'estado' => sanitizeInput($_POST['estado'] ?? ''),
-                    'tipo_usuario' => sanitizeInput($_POST['tipo_usuario'] ?? ''),
-                    'cpf_cnpj' => sanitizeInput($_POST['cpf_cnpj'] ?? '')
+                    'rua' => filter_var($_POST['rua'] ?? '', FILTER_SANITIZE_STRING),
+                    'cep' => filter_var($_POST['cep'] ?? '', FILTER_SANITIZE_STRING),
+                    'numero' => filter_var($_POST['numero'] ?? '', FILTER_SANITIZE_STRING),
+                    'bairro' => filter_var($_POST['bairro'] ?? '', FILTER_SANITIZE_STRING),
+                    'municipio' => filter_var($_POST['municipio'] ?? '', FILTER_SANITIZE_STRING),
+                    'estado' => filter_var($_POST['estado'] ?? '', FILTER_SANITIZE_STRING),
+                    'tipo_usuario' => filter_var($_POST['tipo_usuario'] ?? '', FILTER_SANITIZE_STRING),
+                    'cpf_cnpj' => preg_replace('/[^0-9]/', '', $_POST['cpf_cnpj'] ?? '')
                 ];
                 
                 // Validações
@@ -122,12 +132,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         $conn = getDBConnection();
                         
                         // Verificar se email já existe
-                        $stmt = $conn->prepare("SELECT id FROM usuarios WHERE email = :email");
+                        $stmt = $conn->prepare("SELECT id, email_verificado FROM usuarios WHERE email = :email");
                         $stmt->bindParam(':email', $dados['email']);
                         $stmt->execute();
                         
                         if ($stmt->rowCount() > 0) {
-                            $errors[] = "Este email já está cadastrado.";
+                            $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
+                            if ($existingUser['email_verificado'] == 1) {
+                                $errors[] = "Este email já está cadastrado e verificado.";
+                            } else {
+                                $errors[] = "Este email já foi cadastrado mas não foi verificado. Verifique sua caixa de email ou solicite um novo link.";
+                            }
                         }
                         
                         // Verificar se CPF/CNPJ já existe
@@ -143,12 +158,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         if (empty($errors)) {
                             $conn->beginTransaction();
                             
+                            // Gerar token de verificação se necessário
+                            $verificationToken = null;
+                            $verificationExpires = null;
+                            
+                            if ($emailVerificationRequired) {
+                                $verificationToken = generateEmailVerificationToken();
+                                $verificationExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
+                            }
+                            
                             $sql = "INSERT INTO usuarios (
                                 nome, email, celular, senha, rua, bairro, cep, numero, 
-                                municipio, estado, tipo_usuario, cpf_cnpj, data_cadastro
+                                municipio, estado, tipo_usuario, cpf_cnpj, data_cadastro,
+                                email_verificado, verification_token, verification_expires
                             ) VALUES (
                                 :nome, :email, :celular, :senha, :rua, :bairro, :cep, :numero,
-                                :municipio, :estado, :tipo_usuario, :cpf_cnpj, NOW()
+                                :municipio, :estado, :tipo_usuario, :cpf_cnpj, NOW(),
+                                :email_verificado, :verification_token, :verification_expires
                             )";
                             
                             $stmt = $conn->prepare($sql);
@@ -165,7 +191,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 ':municipio' => $dados['municipio'],
                                 ':estado' => $dados['estado'],
                                 ':tipo_usuario' => $dados['tipo_usuario'],
-                                ':cpf_cnpj' => $dados['cpf_cnpj']
+                                ':cpf_cnpj' => $dados['cpf_cnpj'],
+                                ':email_verificado' => $emailVerificationRequired ? 0 : 1,
+                                ':verification_token' => $verificationToken,
+                                ':verification_expires' => $verificationExpires
                             ];
                             
                             if ($stmt->execute($params)) {
@@ -181,16 +210,38 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 ");
                                 $stmtLog->execute([$userId, $ip, $userAgent]);
                                 
-                                $conn->commit();
+                                // Enviar email de verificação se necessário
+                                if ($emailVerificationRequired && $verificationToken) {
+                                    $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]";
+                                    $verificationLink = $baseUrl . "/verify-email.php?token=" . $verificationToken;
+                                    
+                                    if (sendVerificationEmail($dados['email'], $dados['nome'], $verificationLink)) {
+                                        $message = "🎉 Cadastro realizado com sucesso!<br><br>";
+                                        $message .= "📧 <strong>Enviamos um email de verificação para:</strong><br>";
+                                        $message .= "<span class='fw-bold'>" . htmlspecialchars($dados['email']) . "</span><br><br>";
+                                        $message .= "📌 <strong>Importante:</strong> Verifique sua caixa de entrada <strong>(e a pasta de spam)</strong> para ativar sua conta.<br>";
+                                        $message .= "🔗 O link de verificação é válido por <strong>24 horas</strong>.<br><br>";
+                                        $message .= "👉 <a href='login.php' class='text-success fw-bold'>Fazer login após verificação</a>";
+                                        $messageClass = "success";
+                                    } else {
+                                        $message = "⚠️ Cadastro realizado, mas houve um problema ao enviar o email de verificação.<br>";
+                                        $message .= "Entre em contato com o suporte ou tente fazer login para solicitar um novo link.";
+                                        $messageClass = "warning";
+                                    }
+                                } else {
+                                    // Se não precisa de verificação
+                                    $message = "✅ Cadastro realizado com sucesso! Bem-vindo à CoopAgro!<br>";
+                                    $message .= "Você será redirecionado para o login em 3 segundos...";
+                                    $messageClass = "success";
+                                    $redirectToLogin = true;
+                                }
                                 
-                                $message = "Cadastro realizado com sucesso! Bem-vindo à CoopAgro! Você será redirecionado para a página de login em 3 segundos.";
-                                $messageClass = "success";
-                                $redirectToLogin = true;
+                                $conn->commit();
                                 $_SESSION['cadastro_tentativas'] = 0;
                                 
                             } else {
                                 $conn->rollBack();
-                                $message = "Erro ao cadastrar. Tente novamente.";
+                                $message = "❌ Erro ao cadastrar. Tente novamente.";
                                 $messageClass = "danger";
                             }
                         }
@@ -200,10 +251,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         }
                         
                         if ($e->getCode() == 23000) {
-                            $message = "Este email ou CPF/CNPJ já está cadastrado em nosso sistema.";
+                            $message = "⚠️ Este email ou CPF/CNPJ já está cadastrado em nosso sistema.";
                         } else {
                             error_log("Erro no cadastro: " . $e->getMessage());
-                            $message = "Erro no sistema. Tente novamente mais tarde.";
+                            $message = "🚨 Erro no sistema. Tente novamente mais tarde.";
                         }
                         $messageClass = "danger";
                     }
@@ -211,7 +262,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 
                 // Se houver erros de validação
                 if (!empty($errors)) {
-                    $message = implode("<br>", $errors);
+                    $message = "⚠️ <strong>Corrija os seguintes erros:</strong><br>" . implode("<br>", $errors);
                     $messageClass = "warning";
                 }
             }
@@ -229,6 +280,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
+        /* O CSS permanece exatamente como estava no seu arquivo original */
         :root {
             --verde-principal: #2e7d32;
             --verde-secundario: #4caf50;
@@ -620,8 +672,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 <div class="col-md-4">
                                     <label for="estado" class="form-label">Estado *</label>
                                     <input type="text" class="form-control" id="estado" name="estado" required 
-                                           value="<?php echo isset($_POST['estado']) ? htmlspecialchars($_POST['estado']) : ''; ?>"
-                                           maxlength="2">
+                                           value="<?php echo isset($_POST['estado']) ? htmlspecialchars($_POST['estado']) : ''; ?>" maxlength="2">
                                     <div class="form-text">Ex: SP, RJ, MG</div>
                                 </div>
                             </div>
@@ -854,9 +905,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 errorMessage += 'CEP inválido! Use o formato 00000-000.\n';
             }
             
+            // Validar termos
+            if (!document.getElementById('aceitar_termos').checked) {
+                isValid = false;
+                errorMessage += 'Você deve aceitar os Termos de Uso e Política de Privacidade!\n';
+            }
+            
             if (!isValid) {
                 e.preventDefault();
-                alert(errorMessage);
+                alert('Por favor, corrija os seguintes erros:\n\n' + errorMessage);
                 return false;
             }
             
