@@ -9,28 +9,37 @@ $descricao = "Entre em contato conosco";
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="shortcut icon" href="Images/logo.png" type="image/x-icon" />
+    
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="images/logo.png" type="image/x-icon" />
 
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" />
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <!-- Seus estilos -->
     <link rel="stylesheet" href="css/index.css" />
     <link rel="stylesheet" href="css/contato.css" />
 
     <title>Contato</title>
 </head>
 
-
 <body>
 
+    <!-- VLibras -->
     <div vw class="enabled">
         <div vw-access-button class="active"></div>
         <div vw-plugin-wrapper></div>
     </div>
 
+    <!-- Painel de acessibilidade -->
     <div class="painel-flutuante">
         <button id="btnAbrir">⚙️</button>
         <div class="painel-acessibilidade" id="painelAcessibilidade">
             <h4>Painel de Acessibilidade</h4>
-            <button onclick="contraste()"><i class="bi bi-brightness-high-fill"> </i>Alto contraste</button>
+            <button onclick="contraste()"><i class="bi bi-brightness-high-fill"></i> Alto contraste</button>
             <button onclick="fonteMais()"><i class="bi bi-type-bold"></i></button>
             <button onclick="fonteMenos()"><i class="bi bi-type"></i></button>
             <button onclick="resetar()"><i class="bi bi-arrow-counterclockwise"></i> Padrão</button>
@@ -71,7 +80,6 @@ $descricao = "Entre em contato conosco";
 
         const btnAbrir = document.getElementById('btnAbrir');
         const painel = document.getElementById('painelAcessibilidade');
-
         btnAbrir.addEventListener('click', () => {
             painel.style.display = painel.style.display === 'flex' ? 'none' : 'flex';
         });
@@ -113,32 +121,32 @@ $descricao = "Entre em contato conosco";
         <?php require_once "includes/_footer.php"; ?>
     </footer>
 
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
 
+    <!-- Função WhatsApp -->
     <script>
         function enviarWhats(event) {
             event.preventDefault();
-
             let nome = document.querySelector('input[name="nome"]').value;
             let assunto = document.querySelector('input[name="assunto"]').value;
             let mensagem = document.querySelector('textarea[name="mensagem"]').value;
             let numero = "5569992153975";
-
             let texto =
                 "📩 *Olá, gostaria de ser atendido pela CoopAgro!*\n\n" +
                 "*Nome:* " + nome + "\n" +
                 "*Assunto:* " + assunto + "\n" +
                 "*Mensagem:* " + mensagem;
-
             let url = "https://wa.me/" + numero + "?text=" + encodeURIComponent(texto);
-
             window.open(url, "_blank");
         }
     </script>
 
+    <!-- VLibras Plugin -->
     <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
     <script>
         new window.VLibras.Widget('https://vlibras.gov.br/app');
     </script>
 
 </body>
+</html>
