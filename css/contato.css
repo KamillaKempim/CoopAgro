@@ -1,7 +1,6 @@
-
 .contato-header {
     background: linear-gradient(rgba(20, 61, 15, 0.6), rgba(20, 61, 15, 0.6)),
-                url('../images/contato.png');
+                url('../Igimages/contato.png'); /* “images” em minúsculo para Linux */
     background-size: cover;
     background-position: center;
     height: 300px;
@@ -58,19 +57,17 @@ button.btn-success {
   background-color: #0b7d44;
 }
 
-
 .painel-acessibilidade {
   display: none; 
   flex-direction: column;
   gap: 6px;
   margin-bottom: 10px;
   background: #ffffff;
-  color:rgb(11, 66, 5);
+  color: rgb(11, 66, 5);
   padding: 12px 15px;
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
-
 
 .painel-acessibilidade button {
   padding: 8px 12px;
@@ -87,23 +84,7 @@ button.btn-success {
   background-color: #d4d4d4;
 }
 
-
-.modo-contraste, 
-.modo-contraste * {
-  background-color: #000 !important;
-  color: #fff !important;
-  border-color: #fff !important;
-}
-
-.modo-contraste a {
-  color: #FFD700 !important;
-  text-decoration: underline;
-}
-
-.modo-contraste img {
-  filter: brightness(0.8) !important;
-}
-
+/* Modo contraste */
 .modo-contraste, 
 .modo-contraste * {
   background-color: #000 !important;
@@ -119,13 +100,9 @@ button.btn-success {
   text-decoration: underline !important;
 }
 
-.modo-contraste * {
-  background-image: none !important;
-}
-
 .modo-contraste img,
 .modo-contraste [style*="background-image"] {
-  filter: grayscale(1) brightness(0.4) !important;
+  filter: grayscale(0.2) brightness(0.8) !important; 
 }
 
 .modo-contraste .card,
@@ -157,28 +134,20 @@ button.btn-success {
   background-color: #000 !important;
 }
 
+/* Responsividade */
 @media (max-width: 768px) {
   .container img {
     display: none !important;
   }
-}
-@media (max-width: 768px) {
   .texto {
     width: 100% !important;
   }
-}
-@media (max-width: 768px) {
   .hero {
     height: auto;
   }
-
   .hero-img {
     width: 100%;
     height: auto;
     object-fit: contain; 
   }
-}
-.modo-contraste img,
-.modo-contraste [style*="background-image"] {
-  filter: grayscale(0.2) brightness(0.8) !important; 
 }
