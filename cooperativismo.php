@@ -1,6 +1,13 @@
 <?php
 $titulo = "Cooperativismo no Agronegócio - Unindo o Campo";
 $descricao = "Cooperativismo agrícola: fortalecendo produtores rurais através da união e cooperação";
+
+// No início do arquivo, ANTES de qualquer HTML
+session_start();
+
+// Ou se preferir usar require_once
+require_once 'includes/auth.php';
+
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">

@@ -97,7 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$nome, $descricao, $preco, $quantidade, $imagemNome, $tipo, $unidade_medida]);
             
             // Log da ação
-            logSecurity($_SESSION['user_id'], 'produto_adicionado', "Produto '{$nome}' adicionado");
             
             $_SESSION['success'] = "Produto adicionado com sucesso!";
             header("Location: telaadministrativa.php");

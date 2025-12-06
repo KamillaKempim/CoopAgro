@@ -568,7 +568,7 @@ if (isset($_SESSION['success'])) {
                     <i class="bi bi-clipboard2-check display-1 text-muted"></i>
                     <h3 class="text-muted mt-3">Nenhuma proposta pendente</h3>
                     <p class="text-muted">Todas as propostas foram analisadas ou não há novas propostas.</p>
-                    <a href="dashboard.php" class="btn btn-success mt-3">
+                    <a href="perfil.php" class="btn btn-success mt-3">
                         <i class="bi bi-arrow-left"></i> Voltar ao Dashboard
                     </a>
                 </div>

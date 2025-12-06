@@ -535,9 +535,7 @@ try {
                                 <?php endif; ?>
                             </a>
 
-                            <a href="produtos_aprovados.php" class="btn btn-outline-success btn-profile">
-                                <i class="bi bi-check-circle"></i> Produtos Aprovados
-                            </a>
+                        
 
                         <?php elseif ($usuario['tipo_usuario'] === 'Administrador'): ?>
                             <a href="validacao_produtos.php" class="btn btn-admin btn-profile">

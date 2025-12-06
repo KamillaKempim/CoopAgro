@@ -19,6 +19,7 @@ try {
     $error = "Erro ao carregar produtos: " . $e->getMessage();
 }
 ?>
+    <?php include 'includes/_segundo_menu.php'; ?>
 
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -306,7 +307,7 @@ try {
    <?php include_once 'includes/_acessibilidade.php'; ?>
    
 
-    <?php include 'includes/_segundo_menu.php'; ?>
+
 
     <section class="hero-section">
         <div class="container">

@@ -10,16 +10,12 @@ $descricao = "Entre em contato conosco";
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- Favicon -->
     <link rel="shortcut icon" href="images/logo.png" type="image/x-icon" />
 
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" />
     
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
-    <!-- Seus estilos -->
     <link rel="stylesheet" href="css/index.css" />
     <link rel="stylesheet" href="css/contato.css" />
 
@@ -28,7 +24,6 @@ $descricao = "Entre em contato conosco";
 
 <body>
 
-    <!-- VLibras -->
     <div vw class="enabled">
         <div vw-access-button class="active"></div>
         <div vw-plugin-wrapper></div>
@@ -38,45 +33,45 @@ $descricao = "Entre em contato conosco";
     
 
     <header>
-        <?php require_once "includes/_segundo_menu.php"; ?>
+        <?php require_once "includes/_menu.php"; ?>
     </header>
 
-    <section class="contato-header">
-        <h1>Fale Conosco</h1>
-    </section>
+    <main>
+        <section class="contato-header">
+            <h1>Fale Conosco</h1>
+        </section>
 
-    <div class="contato-card">
-        <h3 class="text-center mb-4">Entre em contato</h3>
+        <div class="contato-card">
+            <h3 class="text-center mb-4">Entre em contato</h3>
 
-        <form onsubmit="enviarWhats(event)">
+            <form onsubmit="enviarWhats(event)">
 
-            <div class="mb-3">
-                <label class="form-label">Nome completo</label>
-                <input type="text" name="nome" class="form-control" required>
-            </div>
+                <div class="mb-3">
+                    <label class="form-label">Nome completo</label>
+                    <input type="text" name="nome" class="form-control" required>
+                </div>
 
-            <div class="mb-3">
-                <label class="form-label">Assunto</label>
-                <input type="text" name="assunto" class="form-control" required>
-            </div>
+                <div class="mb-3">
+                    <label class="form-label">Assunto</label>
+                    <input type="text" name="assunto" class="form-control" required>
+                </div>
 
-            <div class="mb-3">
-                <label class="form-label">Mensagem</label>
-                <textarea name="mensagem" rows="5" class="form-control" required></textarea>
-            </div>
+                <div class="mb-3">
+                    <label class="form-label">Mensagem</label>
+                    <textarea name="mensagem" rows="5" class="form-control" required></textarea>
+                </div>
 
-            <button type="submit" class="btn btn-success w-100">Enviar Mensagem</button>
-        </form>
-    </div>
+                <button type="submit" class="btn btn-success w-100">Enviar Mensagem</button>
+            </form>
+        </div>
+    </main>
 
     <footer>
         <?php require_once "includes/_footer.php"; ?>
     </footer>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- Função WhatsApp -->
     <script>
         function enviarWhats(event) {
             event.preventDefault();
@@ -94,7 +89,6 @@ $descricao = "Entre em contato conosco";
         }
     </script>
 
-    <!-- VLibras Plugin -->
     <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
     <script>
         new window.VLibras.Widget('https://vlibras.gov.br/app');

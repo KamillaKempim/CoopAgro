@@ -1,4 +1,8 @@
 <?php
+// Verifica se a sessão não está ativa antes de iniciar
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 ?>
 
 <!-- Menu de Navegação -->
@@ -16,8 +20,8 @@
     <div class="collapse navbar-collapse" id="navbarMain">
       <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
         <li class="nav-item">
-          <a class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'index.php' || isset($_GET['sobre'])) ? 'active' : ''; ?>" 
-             href="index.php#sobre">Sobre</a>
+          <a class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'index.php' || basename($_SERVER['PHP_SELF']) == '') ? 'active' : ''; ?>" 
+             href="index.php">Início</a>
         </li>
         <li class="nav-item">
           <a class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'produtos.php') ? 'active' : ''; ?>" 
@@ -66,7 +70,7 @@
   </div>
 </nav>
 
-<!-- Estilos do Menu (mantidos inline para evitar conflito) -->
+<!-- CSS do Menu (mantido inline) -->
 <style>
 .navbar-custom {
     background-color: #143d0f !important;
@@ -149,7 +153,6 @@
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.8%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
 
-/* Estilo para o item ativo (página atual) */
 .navbar-custom .nav-link.active {
     background-color: rgba(76, 175, 80, 0.2);
     color: #ffffff !important;
@@ -160,7 +163,6 @@
     background-color: #ffffff;
 }
 
-/* Ajuste para telas pequenas */
 @media (max-width: 991px) {
     .navbar-custom .navbar-nav {
         padding: 1rem 0;
@@ -192,30 +194,23 @@
 <!-- Script para funcionalidade do menu -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Remove a classe active de todos os links
+    // Marcação de página ativa
     const navLinks = document.querySelectorAll('.navbar-custom .nav-link');
     navLinks.forEach(link => {
         link.classList.remove('active');
     });
     
-    // Adiciona a classe active no link da página atual
     const currentPage = window.location.pathname.split('/').pop();
     navLinks.forEach(link => {
         const linkHref = link.getAttribute('href');
-        if (linkHref.includes(currentPage) && currentPage !== '') {
+        if ((currentPage === '' || currentPage === 'index.php') && linkHref.includes('index.php')) {
+            link.classList.add('active');
+        } else if (linkHref.includes(currentPage) && currentPage !== '') {
             link.classList.add('active');
         }
     });
     
-    // Tratamento especial para a página inicial
-    if (currentPage === '' || currentPage === 'index.php') {
-        const sobreLink = document.querySelector('a[href="index.php#sobre"]');
-        if (sobreLink) {
-            sobreLink.classList.add('active');
-        }
-    }
-    
-    // Adiciona scroll suave para âncoras
+    // Scroll suave
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function(e) {
             if(this.getAttribute('href').startsWith('#')) {
@@ -230,7 +225,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         behavior: 'smooth'
                     });
                     
-                    // Atualiza a URL sem recarregar a página
                     history.pushState(null, null, targetId);
                 }
             }
