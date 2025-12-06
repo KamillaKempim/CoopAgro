@@ -355,58 +355,8 @@ function getUploadError($errorCode) {
         <div vw-plugin-wrapper></div>
     </div>
 
-    <!-- Painel acessibilidade -->
-<div class="painel-flutuante">
-  <button id="btnAbrir">⚙️</button>
-  <div class="painel-acessibilidade" id="painelAcessibilidade">
-    <h4>Painel de Acessibilidade</h4> 
-    <button onclick="contraste()"><i class="bi bi-brightness-high-fill">  </i>Alto contraste</button>
-    <button onclick="fonteMais()"><i class="bi bi-type-bold"></i></button>
-    <button onclick="fonteMenos()"><i class="bi bi-type"></i></button>
-    <button onclick="resetar()"><i class="bi bi-arrow-counterclockwise"></i>  Padrão</button>
-  </div>
-</div>
-
-
-<script>
-let tamanho = localStorage.getItem("fonte") || 16;
-document.body.style.fontSize = tamanho + "px";
-
-if(localStorage.getItem("contraste") === "ativo") {
-  document.body.classList.add("modo-contraste");
-}
-
-function contraste() {
-  document.body.classList.toggle("modo-contraste");
-  let ativo = document.body.classList.contains("modo-contraste");
-  localStorage.setItem("contraste", ativo ? "ativo" : "inativo");
-}
-
-function fonteMais() {
-  tamanho = parseInt(tamanho) + 2;
-  document.body.style.fontSize = tamanho + "px";
-  localStorage.setItem("fonte", tamanho);
-}
-
-function fonteMenos() {
-  tamanho = parseInt(tamanho) - 2;
-  document.body.style.fontSize = tamanho + "px";
-  localStorage.setItem("fonte", tamanho);
-}
-
-function resetar() {
-  document.body.classList.remove("modo-contraste");
-  document.body.style.fontSize = "16px";
-  localStorage.clear();
-}
-
-const btnAbrir = document.getElementById('btnAbrir');
-const painel = document.getElementById('painelAcessibilidade');
-
-btnAbrir.addEventListener('click', () => {
-  painel.style.display = painel.style.display === 'flex' ? 'none' : 'flex';
-});
-</script>
+<?php include_once 'includes/_acessibilidade.php'; ?>
+    
 
     <?php include 'includes/_menu.php'; ?>
     

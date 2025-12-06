@@ -5,7 +5,7 @@
 <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top">
   <div class="container">
     <a class="navbar-brand" href="index.php">
-      <img src="images/logo.png" alt="Logo CoopAgro" class="d-inline-block align-top">
+      <img src="Images/logo.png" alt="Logo CoopAgro" class="d-inline-block align-top">
     </a>
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" 

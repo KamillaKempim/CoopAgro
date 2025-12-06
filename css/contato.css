@@ -1,6 +1,6 @@
 .contato-header {
     background: linear-gradient(rgba(20, 61, 15, 0.6), rgba(20, 61, 15, 0.6)),
-                url('../Igimages/contato.png'); /* “images” em minúsculo para Linux */
+                url('Images/contato.png'); /* “images” em minúsculo para Linux */
     background-size: cover;
     background-position: center;
     height: 300px;
