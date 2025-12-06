@@ -497,7 +497,7 @@ function getUploadError($errorCode) {
         </div>
     </div>
     
-    <?php include 'includes/_footer.php'; ?>
+    
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {

@@ -517,8 +517,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div vw-access-button class="active"></div>
         <div vw-plugin-wrapper></div>
     </div>
-
+    <?php include 'includes/_menu.php'; ?>
     <?php include_once 'includes/_acessibilidade.php'; ?>
+     
     
 
     <div class="register-container">
